@@ -2,3 +2,5 @@ build/
 corpus/simons/
 *.log
 .DS_Store
+__pycache__/
+!tests/golden/**/run.log
