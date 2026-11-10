@@ -5,9 +5,16 @@ while old Simons' BASIC programs keep working. Owner: Fafa. Branch: `tsb-ultra`.
 
 Plan and decisions: "TSB Ultra — Alternatives Analysis & Project Plan"
 https://claude.ai/artifact/VhxLiJE5gbeRPxeFnX2dJK (phases 0–7, gates G0–G7, task tracker).
-Recommended: Alternative 3, a dual-personality EasyFlash cartridge (Classic Simons + Classic TSB + Ultra engine).
-Open decisions: D1 meaning of "100% compatible", D2 one mode or two, D3 public vs personal release,
-D4 acceptable Ultra slowdown.
+Recommended: Alternative 3, a dual-personality EasyFlash cartridge (Classic TSB Neo + Ultra engine).
+Decided D1 (10 Nov): TSB Neo 2.60.228 is the reference. "100% compatible" = behaves exactly like
+TSB Neo, and every program on corpus/tsbneo_260228.d64 runs flawlessly. No original Simons' BASIC
+is used; the Classic Simons slot is dropped.
+Open decisions: D2 one mode or two, D3 public vs personal release, D4 acceptable Ultra slowdown.
+
+## Working split
+- This Claude Code session (on the Mac) does the build and test work in this repo.
+- The plan doc is maintained from the claude.ai chat. Put results the plan needs in reports/
+  (one markdown file per task, e.g. reports/1.3-demo-baseline.md) so they can be picked up there.
 
 ## Facts established (verified, don't re-derive)
 - The released CRT is Magic Desk (type 19, 8 x 8K). A launcher copies TSB to RAM $8000-$CFFF and
@@ -23,7 +30,7 @@ D4 acceptable Ultra slowdown.
 ## Running tests on this Mac
 - VICE: ~/Applications/VICE-3.10-SDL2-BluetoothFix/bin/x64sc (ROMs in ../share/vice).
   tools/run_crt.sh finds it automatically; override with X64SC=... and VICE_DATA=...
-- `make test` needs the released CRT copied to build/TSBneo.crt.
+- `make test` needs the released CRT copied to build/TSBneo.crt (source: corpus/simons/TSBneo_md_260228_disklike.crt).
 - Demo run: SCRFLAGS=-l tools/run_demo.sh build/TSBneo.crt corpus/tsbneo_260228.d64 center.dmo /tmp/x.bin
   (program names in lower case; -l decodes the lower/upper case charset).
 - The macOS harness path is untested so far: verify it first in a native session.
