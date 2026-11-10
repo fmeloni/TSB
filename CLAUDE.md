@@ -26,6 +26,8 @@ Open decisions: D2 one mode or two, D3 public vs personal release, D4 acceptable
   Those demos load data and extensions to fixed addresses ($033C, $0400, $2000, $3800, $4000,
   $6000, $7000, $7400, $7800, $C000, $CA00, $CB00, $CC00, $E000). Ultra must keep those
   addresses and TSB's $C000-$CFFF layout and entry points.
+- Task 1.3 found that the demos also PEEK/POKE/SYS into TSB code at $8000-$BFFF (patch points, tables,
+  hook vectors); see the table in reports/1.3-demo-baseline.md. IMG VIEWER and WRITEIMAGES2REU need an REU.
 
 ## Running tests on this Mac
 - VICE: ~/Applications/VICE-3.10-SDL2-BluetoothFix/bin/x64sc (ROMs in ../share/vice).
@@ -33,7 +35,10 @@ Open decisions: D2 one mode or two, D3 public vs personal release, D4 acceptable
 - `make test` needs the released CRT copied to build/TSBneo.crt (source: corpus/simons/TSBneo_md_260228_disklike.crt).
 - Demo run: SCRFLAGS=-l tools/run_demo.sh build/TSBneo.crt corpus/tsbneo_260228.d64 center.dmo /tmp/x.bin
   (program names in lower case; -l decodes the lower/upper case charset).
-- The macOS harness path is untested so far: verify it first in a native session.
+- macOS harness verified (10 Nov): `make test` passes in ~9 s. VICE is driven through its binary monitor
+  (tools/vicemon.py), with no window (SDL_VIDEODRIVER=dummy). The old -moncommands approach hung: SDL VICE ignores `quit`.
+- Demo baseline: `make test-demos` (43 scenarios in tests/demos.json vs tests/golden/, ~6 min); see
+  reports/1.3-demo-baseline.md. tools/tsblist.py lists TSB programs from the D64.
 - ACME is needed for `make build` (`brew install acme`, or tools/setup-linux.sh on Linux).
 
 ## Rules

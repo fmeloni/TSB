@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| ......................................
+ 3| ..The List of Commands shows all 203..
+ 4| ..different command keywords of TSB...
+ 5| ..Some are either functions AND     ..
+ 6| ..commands, however either operating..
+ 7| ..individual tasks.                 ..
+ 8| ..Comparing command words should    ..
+ 9| ..show where to shift a keyword     ..
+10| ..when abbreviating it on editing.  ..
+11| ..                                  ..
+12| ..TSB commands have higher priority,..
+13| ..so you have to give up common     ..
+14| ..behaviours (now 'loA' for 'load')...
+15| ..                                  ..
+16| ..Combined keywords are sadly NOT   ..
+17| ..included.                         ..
+18| ..                                  ..
+19| ......................................
+20| .                                    .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 15 bg 15  sprites $00
+ 0|9   "retrofan.set":     prg
+ 1|4   "zs110mini.set":    prg
+ 2|9   "puzzle.set":       prg
+ 3|9   "kirby.set":        prg
+ 4|9   "platman.set":      prg
+ 5|9   "mayhem3a90.fnt":   prg
+ 6|9   "mayhem.scr":       prg
+ 7|1   "kirbymap":         seq
+ 8|4   "ext.dirselect":    prg
+ 9|1   "ext.inst":         prg
+10|1   "ext.map":          prg
+11|8   "ext.vdcbasic":     prg
+12|1   "ext.fnscreen":     prg
+13|1   "ext.linput":       prg
+14|0   "----------------": del
+15|9   "bait+switch.scr":  prg
+16|9   "breakdance.scr":   prg
+17|40  "outrunmemo.koa":   prg
+18|36  "christmasday.art": prg
+19|36  "cat barf.art":     prg
+20|36  "i can has ro.art": prg
+21|36  "under the re.art": prg
+22|32blocks free.
+23|00, ok,00,00
+24|..............................

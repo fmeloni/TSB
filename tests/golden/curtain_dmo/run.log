@@ -1,0 +1,11 @@
+stable 120: ok after 130 frames
+  -> checkpoint 01_start
+type ' '
+stable 120: ok after 160 frames
+  -> checkpoint 02_closed
+type ' '
+stable 120: ok after 160 frames
+  -> checkpoint 03_again
+type 'n'
+end: ok after 90 frames
+total 540 frames

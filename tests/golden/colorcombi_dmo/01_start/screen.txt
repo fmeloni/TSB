@@ -1,0 +1,26 @@
+; screen $CC00  text  charset RAM $E800  border 0 bg 0  sprites $00
+ 0|            .OLOR .OMBINER
+ 1|
+ 2|
+ 3|
+ 4|
+ 5|
+ 6|     0 1 2 3 4 5 6 7 8 9 A B C D E F
+ 7|
+ 8|           .OMBINE THESE TWO:
+ 9|
+10|        (.NPUT AND PRESS .NTER)
+11|
+12|
+13|     .UMBER 1 :
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|

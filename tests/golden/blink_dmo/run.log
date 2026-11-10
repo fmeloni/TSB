@@ -1,0 +1,5 @@
+stable 120: ok after 130 frames
+  -> checkpoint 01_blinking
+hold space 30 frames
+end: ok after 70 frames
+total 230 frames

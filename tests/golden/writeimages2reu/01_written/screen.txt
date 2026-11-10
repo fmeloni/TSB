@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|Loading christmasday.art - ok
+ 1|Loading cat barf.art - ok
+ 2|Loading i can has ro.art - ok
+ 3|Loading under the re.art - ok
+ 4|Loading kolmiolaeaek.art
+ 5|Loading lighthouse.art
+ 6|Loading elf-bitbreak.art
+ 7|
+ 8|          To view a Slideshow:
+ 9|
+10|         load"showimagesinreu"
+11|
+12|ready.
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|

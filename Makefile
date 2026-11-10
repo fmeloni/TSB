@@ -3,7 +3,7 @@
 ACME ?= acme
 BUILD := build
 
-.PHONY: all build test clean
+.PHONY: all build test test-demos clean
 all: build
 
 build: $(BUILD)/tsbneo_disk.prg $(BUILD)/tsbneo_cart.bin
@@ -22,6 +22,10 @@ $(BUILD)/tsbneo_cart.bin: TSBneo/tsbneo.a TSBneo/memhook.inc TSBneo/MD_memhook.i
 TSB_CRT ?= $(BUILD)/TSBneo.crt
 test: build
 	tests/boot_tsbneo.sh $(TSB_CRT)
+
+# Demo baseline (task 1.3): all corpus programs against tests/golden/, several minutes.
+test-demos: build
+	tests/demos_tsbneo.sh $(TSB_CRT)
 
 clean:
 	rm -rf $(BUILD)

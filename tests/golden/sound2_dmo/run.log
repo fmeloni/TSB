@@ -1,0 +1,6 @@
+sid 400 frames: 14 distinct states
+stable 120: ok after 130 frames
+  -> checkpoint 01_again
+type 'n'
+end: ok after 70 frames
+total 600 frames

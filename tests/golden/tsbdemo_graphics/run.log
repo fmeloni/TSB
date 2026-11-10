@@ -1,0 +1,14 @@
+stable 120: ok after 170 frames
+  -> checkpoint 01_menu
+type 'g'
+stable 120: ok after 140 frames
+  -> checkpoint 02_hint
+type ' '
+stable 100: ok after 180 frames
+  -> checkpoint 03_zoom_tsb
+stable 100: ok after 890 frames
+  -> checkpoint 04_circles
+stable 100: ok after 180 frames
+  -> checkpoint 05_zoom_tsb_reversed
+stable 400: ok after 620 frames
+total 2180 frames

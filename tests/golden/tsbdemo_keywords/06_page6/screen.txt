@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| .     List of all Basic Keywords     .
+ 3| .                                    .
+ 4| .  171  -           188  log         .
+ 5| .  172  *           189  exp         .
+ 6| .  173  /           190  cos         .
+ 7| .  174  .           191  sin         .
+ 8| .  175  and         192  tan         .
+ 9| .  176  or          193  atn         .
+10| .  177  >           194  peek        .
+11| .  178  =           195  len         .
+12| .  179  <           196  str$        .
+13| .  180  sgn         197  val         .
+14| .  181  int         198  asc         .
+15| .  182  abs         199  chr$        .
+16| .  183  usr         200  left$       .
+17| .  184  fre         201  right$      .
+18| .  185  pos         202  mid$        .
+19| .  186  sqr         203  go          .
+20| .  187  rnd                          .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

@@ -1,0 +1,8 @@
+stable 120: ok after 170 frames
+  -> checkpoint 01_pattern
+type ' '
+stable 120: ok after 130 frames
+  -> checkpoint 02_end_of_demo
+type ' '
+end: ok after 70 frames
+total 370 frames

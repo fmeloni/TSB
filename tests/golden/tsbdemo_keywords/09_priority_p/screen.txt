@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| .     Priority when Shortcutting     .
+ 3| .                                    .
+ 4| .Keyword (0=Exit): p                 .
+ 5| .                                    .
+ 6| .      2  plot                       .
+ 7| .     16  place                      .
+ 8| .     33  play                       .
+ 9| .     49  proc                       .
+10| .     75  page                       .
+11| .     92  pot                        .
+12| .     93  penx                       .
+13| .     95  peny                       .
+14| .    102  pause                      .
+15| .    117  paint                      .
+16| .    151  poke                       .
+17| .    152  print#                     .
+18| .    153  print                      .
+19| .    185  pos                        .
+20| .    194  peek                       .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

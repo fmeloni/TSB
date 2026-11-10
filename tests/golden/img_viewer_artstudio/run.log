@@ -1,0 +1,15 @@
+stable 120: ok after 170 frames
+type '3\r'
+stable 120: ok after 150 frames
+type '8\r'
+stable 120: ok after 530 frames
+type ' '
+stable 120: ok after 140 frames
+type 'christmasday.art\r'
+stable 120: ok after 900 frames
+  -> checkpoint 01_image
+type ' '
+stable 120: ok after 150 frames
+type 'x\r'
+end: ok after 70 frames
+total 2110 frames

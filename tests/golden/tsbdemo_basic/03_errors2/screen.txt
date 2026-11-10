@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| .     List of all Error Messages     .
+ 3| ......................................
+ 4| .  18 bad subscript error            .
+ 5| .  19 redim'd array error            .
+ 6| .  20 division by zero error         .
+ 7| .  21 illegal direct error           .
+ 8| .  22 type mismatch error            .
+ 9| .  23 string too long error          .
+10| .  24 file data error                .
+11| .  25 formula too complex error      .
+12| .  26 can't continue error           .
+13| .  27 undef'd function error         .
+14| .  28 verify error                   .
+15| .  29 load error                     .
+16| .  30 break  error                   .
+17| .                                    .
+18| .  32 bad mode error                 .
+19| .  33 no proc error                  .
+20| .  34 insert too large error         .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

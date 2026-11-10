@@ -1,0 +1,5 @@
+stable 120: ok after 700 frames
+  -> checkpoint 01_game_screen
+type ' '
+end: ok after 150 frames
+total 850 frames

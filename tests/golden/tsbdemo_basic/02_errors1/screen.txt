@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| .     List of all Error Messages     .
+ 3| ......................................
+ 4| .   1 too many files error           .
+ 5| .   2 file open error                .
+ 6| .   3 file not open error            .
+ 7| .   4 file not found error           .
+ 8| .   5 device not present error       .
+ 9| .   6 not input file error           .
+10| .   7 not output file error          .
+11| .   8 missing file name error        .
+12| .   9 illegal device number error    .
+13| .  10 next without for error         .
+14| .  11 syntax error                   .
+15| .  12 return without gosub error     .
+16| .  13 out of data error              .
+17| .  14 illegal quantity error         .
+18| .  15 overflow error                 .
+19| .  16 out of memory error            .
+20| .  17 undef'd statement error        .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

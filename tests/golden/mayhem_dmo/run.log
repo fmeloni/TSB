@@ -1,0 +1,8 @@
+stable 120: ok after 130 frames
+  -> checkpoint 01_intro
+type '\r'
+stable 120: ok after 430 frames
+  -> checkpoint 02_scene
+type ' '
+end: ok after 170 frames
+total 730 frames

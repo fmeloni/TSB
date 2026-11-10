@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|DDIVD!DUPINKEYINSTTESTLINEXORINSERTPOTPE
+ 1|NX>PENYSOUNDGRAPHICSDESIGNRLOCMOBCMOBBCK
+ 2|GNDSPAUSENRMMOBOFFANGLARCCOLDSCRSVSCRLDT
+ 3|EXTCSETVOLDISKHRDCPYKEYPAINTLOW COLCOPYM
+ 4|ERGERENUMBERMEMDETECTCHECKDISPLAYERROUT@
+ 5|BAD MODENO PROCINSERT TOO LARGESTRING TO
+ 6|O LARGEBIN CHARHEX CHAREND PROC W/O EXEC
+ 7|END LOOP W/O LOOPUNTIL W/O REPEATNOT YET
+ 8| ACTIVETOO FEW LINESBAD CHARNO ARRAY9+.+
+ 9|d,m,......v,.-,,Y-.+..Hc..>N............
+10|....y+6[.&<8&)R7.[.9.7#x.8v7Y:S7.!%<z9Hc
+11|HcC#Hc%HHc$:b:k<.<o:O9<;Y;H9F:h;.[9yF;F;
+12|Hc.;7c%-.:c;/?.x.w$;3;O]e8TGGH"?-:H[Hc.+
+13|9y.>.5Hc.uHcX=Hc. HcHcF;Hc?7'+.*0)!)38.8
+14|.u.)o<s1Q1T@.%P%.-h[.7."G6]9U3Z+!6&?.K?y
+15|k*g=U]r#yv.h.h.hghwh.h'h8hEhIhYh.h.h.h..
+16|......@gnuuCCDDEFFGGAABZ,1%0?<Xv'9K..j!:
+17|T.n@'Kj:.n@@. phdba.?......abdhp .@.....
+18|.?..0lc@ hb.pda@.@......................
+19|....v...v...t5!#bJH.]r r]] eqrs.]..pqrst
+20|.]..mauvwxyz[@@.@.@h12pomhh51pom@ahi['mi
+21|j0FNULLTSB.MEMTSB.EXTTSB.HSGKEY@CHR$(13)
+22|@AD23m2.60228f."rP.f."xP.f.".P.f."0PV"6,
+23|ready.
+24|

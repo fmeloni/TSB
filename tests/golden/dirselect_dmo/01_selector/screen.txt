@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|              Ende mit '.'
+ 1|
+ 2|
+ 3|
+ 4|
+ 5|
+ 6|
+ 7|
+ 8|
+ 9|
+10|
+11|
+12|
+13|            ....................
+14|            ."tsb neo 2.60228 ".
+15|            . tsb              .
+16|            . tsb.neo          .
+17|            . tsb.mem          .
+18|            . tsb.hsg          .
+19|            . tsb.mon          .
+20|            . tsb.ext          .
+21|            . ---------------- .
+22|            . tsbdemo.dmo      .
+23|            ....................
+24|

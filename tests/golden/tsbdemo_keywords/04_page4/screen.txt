@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| .     List of all Basic Keywords     .
+ 3| .                                    .
+ 4| .  103  nrm         120  merge       .
+ 5| .  104  mob         121  renumber    .
+ 6| .  105  off         122  mem         .
+ 7| .  106  angl        123  detect      .
+ 8| .  107  arc         124  check       .
+ 9| .  108  cold        125  display     .
+10| .  109  scrsv       126  err         .
+11| .  110  scrld       127  out         .
+12| .  111  text        128  end         .
+13| .  112  cset        129  for         .
+14| .  113  vol         130  next        .
+15| .  114  disk        131  data        .
+16| .  115  hrdcpy      132  input#      .
+17| .  116  key         133  input       .
+18| .  117  paint       134  dim         .
+19| .  118  low col     135  read        .
+20| .  119  copy        136  let         .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

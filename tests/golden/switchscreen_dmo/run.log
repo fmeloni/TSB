@@ -1,0 +1,11 @@
+stable 120: ok after 440 frames
+  -> checkpoint 01_mem_screen
+type ' '
+stable 120: ok after 130 frames
+  -> checkpoint 02_normal_screen
+type ' '
+stable 120: ok after 130 frames
+  -> checkpoint 03_mem_screen_again
+type ' '
+end: ok after 140 frames
+total 840 frames

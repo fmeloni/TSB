@@ -1,0 +1,20 @@
+stable 120: ok after 170 frames
+  -> checkpoint 01_menu
+type '2\r'
+stable 120: ok after 150 frames
+  -> checkpoint 02_drive
+type '8\r'
+stable 120: ok after 530 frames
+  -> checkpoint 03_dir
+type ' '
+stable 120: ok after 140 frames
+  -> checkpoint 04_filename
+type 'outrunmemo.koa\r'
+stable 120: ok after 980 frames
+  -> checkpoint 05_image
+type ' '
+stable 120: ok after 140 frames
+  -> checkpoint 06_back
+type 'x\r'
+end: ok after 70 frames
+total 2180 frames

@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| .     List of all Basic Keywords     .
+ 3| .                                    .
+ 4| .  137  goto        154  cont        .
+ 5| .  138  run         155  list        .
+ 6| .  139  if          156  clr         .
+ 7| .  140  restore     157  cmd         .
+ 8| .  141  gosub       158  sys         .
+ 9| .  142  return      159  open        .
+10| .  143  rem         160  close       .
+11| .  144  stop        161  get         .
+12| .  145  on          162  new         .
+13| .  146  wait        163  tab(        .
+14| .  147  load        164  to          .
+15| .  148  save        165  fn          .
+16| .  149  verify      166  spc(        .
+17| .  150  def         167  then        .
+18| .  151  poke        168  not         .
+19| .  152  print#      169  step        .
+20| .  153  print       170  +           .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

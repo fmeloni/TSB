@@ -1,0 +1,33 @@
+stable 120: ok after 170 frames
+type 'l'
+stable 120: ok after 530 frames
+  -> checkpoint 01_page1
+type ' '
+stable 120: ok after 530 frames
+  -> checkpoint 02_page2
+type ' '
+stable 120: ok after 510 frames
+  -> checkpoint 03_page3
+type ' '
+stable 120: ok after 510 frames
+  -> checkpoint 04_page4
+type ' '
+stable 120: ok after 480 frames
+  -> checkpoint 05_page5
+type ' '
+stable 120: ok after 420 frames
+  -> checkpoint 06_page6
+type ' '
+stable 120: ok after 150 frames
+  -> checkpoint 07_priority_hint
+type ' '
+stable 120: ok after 130 frames
+  -> checkpoint 08_priority_prompt
+type 'p\r'
+stable 120: ok after 470 frames
+  -> checkpoint 09_priority_p
+type ' '
+stable 120: ok after 130 frames
+type '0\r'
+stable 120: ok after 150 frames
+total 4180 frames

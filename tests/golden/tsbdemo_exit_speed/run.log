@@ -1,0 +1,20 @@
+stable 120: ok after 170 frames
+type 'e'
+stable 120: ok after 140 frames
+  -> checkpoint 01_hint
+type ' '
+end: ok after 70 frames
+  -> checkpoint 02_dump
+type 'speed\r'
+stable 200: ok after 1630 frames
+  -> checkpoint 03_speed1
+stable 200: ok after 1330 frames
+  -> checkpoint 04_speed2
+stable 200: ok after 1280 frames
+  -> checkpoint 05_speed3
+stable 200: ok after 760 frames
+  -> checkpoint 06_speed4
+frames 300
+type 'x'
+end: ok after 110 frames
+total 5790 frames

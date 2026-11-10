@@ -1,0 +1,22 @@
+stable 120: ok after 170 frames
+type 'b'
+stable 120: ok after 140 frames
+  -> checkpoint 01_hint
+type ' '
+stable 120: ok after 180 frames
+  -> checkpoint 02_errors1
+type ' '
+stable 120: ok after 170 frames
+  -> checkpoint 03_errors2
+type ' '
+stable 120: ok after 160 frames
+  -> checkpoint 04_errors3
+type ' '
+stable 120: ok after 240 frames
+  -> checkpoint 05_print_using
+type ' '
+stable 300: ok after 1350 frames
+  -> checkpoint 06_trace
+type ' '
+stable 120: ok after 150 frames
+total 2560 frames

@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 15 bg 15  sprites $00
+ 0|9   "mayhem3a90.fnt":   prg
+ 1|9   "mayhem.scr":       prg
+ 2|1   "kirbymap":         seq
+ 3|4   "ext.dirselect":    prg
+ 4|1   "ext.inst":         prg
+ 5|1   "ext.map":          prg
+ 6|8   "ext.vdcbasic":     prg
+ 7|1   "ext.fnscreen":     prg
+ 8|1   "ext.linput":       prg
+ 9|0   "----------------": del
+10|9   "bait+switch.scr":  prg
+11|9   "breakdance.scr":   prg
+12|40  "outrunmemo.koa":   prg
+13|36  "christmasday.art": prg
+14|36  "cat barf.art":     prg
+15|36  "i can has ro.art": prg
+16|36  "under the re.art": prg
+17|32blocks free.
+18|00, ok,00,00
+19|.............................. dr 9
+20|
+21|
+22|?device not present  error in 230
+23|ready.
+24|

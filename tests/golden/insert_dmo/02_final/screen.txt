@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 12 bg 12  sprites $00
+ 0|Der Fantasie sind kaum Grenzen gesetzt.
+ 1|
+ 2|r0$=".... ...."
+ 3|r1$=".... ...."
+ 4|r2$="...A ..B."
+ 5|r3$=".... ...."
+ 6|r4$=".... ...."
+ 7|r5$=".... ...."
+ 8|
+ 9|ready.
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|

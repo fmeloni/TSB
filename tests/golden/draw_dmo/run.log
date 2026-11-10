@@ -1,0 +1,10 @@
+frames 300
+type 'x'
+stable 120: ok after 180 frames
+  -> checkpoint 01_continue
+type ' '
+stable 120: ok after 140 frames
+  -> checkpoint 02_finish
+type ' '
+end: ok after 70 frames
+total 690 frames

@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| .     List of all Basic Keywords     .
+ 3| .                                    .
+ 4| .   69  local        86  inkey       .
+ 5| .   70  rcomp        87  inst        .
+ 6| .   71  else         88  test        .
+ 7| .   72  retrace      89  lin         .
+ 8| .   73  trace        90  exor        .
+ 9| .   74  dir          91  insert      .
+10| .   75  page         92  pot         .
+11| .   76  dump         93  penx        .
+12| .   77  find         94  >           .
+13| .   78  option       95  peny        .
+14| .   79  auto         96  sound       .
+15| .   80  old          97  graphics    .
+16| .   81  joy          98  design      .
+17| .   82  mod          99  rlocmob     .
+18| .   83  div         100  cmob        .
+19| .   84  d!          101  bckgnds     .
+20| .   85  dup         102  pause       .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

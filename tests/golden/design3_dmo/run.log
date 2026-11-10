@@ -1,0 +1,11 @@
+stable 120: ok after 140 frames
+  -> checkpoint 01_mono
+type ' '
+stable 120: ok after 130 frames
+  -> checkpoint 02_multicolour
+type ' '
+stable 120: ok after 130 frames
+  -> checkpoint 03_press_enter
+type '\r'
+end: ok after 150 frames
+total 550 frames

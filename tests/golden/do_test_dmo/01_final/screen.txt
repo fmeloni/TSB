@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|Menuesystem
+ 1|-----------
+ 2|
+ 3|Menue A
+ 4|-------
+ 5|1.) Rahmen Schwarz
+ 6|2.) Rahmen Weiss
+ 7|3.) Rahmen Rot
+ 8|4.) Menue B
+ 9|5.) Menue C
+10|6.) Menue D
+11|7.) Beenden
+12|
+13|Ihre Eingabe:
+14|?bad mode  error in 130
+15|ready.
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|

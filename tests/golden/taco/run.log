@@ -1,0 +1,7 @@
+stable 120: ok after 170 frames
+  -> checkpoint 01_idle
+hold a 60 frames
+  -> checkpoint 02_key_a
+hold return 30 frames
+end: ok after 70 frames
+total 330 frames

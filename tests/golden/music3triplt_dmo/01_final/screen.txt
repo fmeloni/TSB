@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1|    **** commodore 64 basic v2 ****
+ 2|
+ 3| 64k ram system  30719 basic bytes free
+ 4| tuned
+ 5|
+ 6|ready.
+ 7|load"music3triplt.dmo",8
+ 8|
+ 9|searching for music3triplt.dmo
+10|loading
+11|ready.
+12|run
+13|
+14|ready.
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|

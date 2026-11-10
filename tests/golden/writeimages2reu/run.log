@@ -1,0 +1,20 @@
+end: ok after 3070 frames
+  -> checkpoint 01_written
+run SHOWIMAGESINREU
+stable 120: ok after 130 frames
+  -> checkpoint 02_show_start
+type ' '
+stable 120: ok after 130 frames
+  -> checkpoint 03_image1
+type ' '
+stable 120: ok after 130 frames
+  -> checkpoint 04_image2
+type ' '
+stable 120: ok after 130 frames
+  -> checkpoint 05_image3
+type ' '
+stable 120: ok after 130 frames
+  -> checkpoint 06_image4
+type 'x'
+end: ok after 70 frames
+total 3790 frames

@@ -1,0 +1,5 @@
+stable 120: ok after 170 frames
+  -> checkpoint 01_centered
+type ' '
+end: ok after 70 frames
+total 240 frames

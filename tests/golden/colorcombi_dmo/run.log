@@ -1,0 +1,17 @@
+stable 120: ok after 180 frames
+  -> checkpoint 01_start
+type '1\r'
+stable 60: ok after 70 frames
+type '7\r'
+stable 120: ok after 130 frames
+  -> checkpoint 02_combo_1_7
+type 't\r'
+stable 120: ok after 180 frames
+type '6\r'
+stable 60: ok after 70 frames
+type 'e\r'
+stable 120: ok after 130 frames
+  -> checkpoint 03_combo_6_e_toggled
+type 'n\r'
+end: ok after 160 frames
+total 920 frames

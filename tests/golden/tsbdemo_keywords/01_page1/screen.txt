@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| .     List of all Basic Keywords     .
+ 3| .                                    .
+ 4| .    1  hires        18  upw         .
+ 5| .    2  plot         19  leftw       .
+ 6| .    3  line         20  leftb       .
+ 7| .    4  block        21  downb       .
+ 8| .    5  fchr         22  downw       .
+ 9| .    6  fcol         23  rightb      .
+10| .    7  fill         24  rightw      .
+11| .    8  rec          25  multi       .
+12| .    9  rot          26  color       .
+13| .   10  draw         27  mmob        .
+14| .   11  char         28  bflash      .
+15| .   12  hi col       29  mob set     .
+16| .   13  inv          30  music       .
+17| .   14  frac         31  flash       .
+18| .   15  move         32  repeat      .
+19| .   16  place        33  play        .
+20| .   17  upb          34  do          .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

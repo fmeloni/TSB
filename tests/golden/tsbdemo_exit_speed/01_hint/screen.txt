@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| ......................................
+ 3| ..Finally you can look at the       ..
+ 4| ..variables we used. When in direct ..
+ 5| ..mode, type DUMP or PLACE 0. Stop  ..
+ 6| ..display by pressing RETURN.       ..
+ 7| ..                                  ..
+ 8| ..If you type SPEED <Return> you'll ..
+ 9| ..have a little (fast).graphics     ..
+10| ..demo in the end!                  ..
+11| ..                                  ..
+12| ..If you like to print these little ..
+13| ..demos to screen or paper, use     ..
+14| ..BLister which is in this package  ..
+15| ..as a little gift to you all!      ..
+16| ..                                  ..
+17| ..                             $AD  ..
+18| ..                                  ..
+19| ......................................
+20| .                                    .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

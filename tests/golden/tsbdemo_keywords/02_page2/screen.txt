@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| .     List of all Basic Keywords     .
+ 3| .                                    .
+ 4| .   35  center       52  end proc    .
+ 5| .   36  envelope     53  exit        .
+ 6| .   37  cgoto        54  end loop    .
+ 7| .   38  wave         55  on key      .
+ 8| .   39  fetch        56  disable     .
+ 9| .   40  at(          57  resume      .
+10| .   41  until        58  loop        .
+11| .   42  >            59  delay       .
+12| .   43  >            60  cls         .
+13| .   44  use          61  x!          .
+14| .   45  >            62  map         .
+15| .   46  global       63  >>          .
+16| .   47  >            64  secure      .
+17| .   48  reset        65  mobcol      .
+18| .   49  proc         66  circle      .
+19| .   50  call         67  on error    .
+20| .   51  exec         68  no error    .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|

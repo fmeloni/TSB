@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|
+ 1| ......................................
+ 2| ......................................
+ 3| ..In this demo you see all error    ..
+ 4| ..messages displayed by OUT. Then   ..
+ 5| ..USE will give formatted numbers.  ..
+ 6| ..Lastly, you can observe your C64  ..
+ 7| ..when working TSB lines.           ..
+ 8| ..                                  ..
+ 9| ..                                  ..
+10| ..                                  ..
+11| ..                                  ..
+12| ..                                  ..
+13| ..                                  ..
+14| ..                                  ..
+15| ..                                  ..
+16| ..                                  ..
+17| ..                                  ..
+18| ..                                  ..
+19| ......................................
+20| .                                    .
+21| .                                    .
+22| .                 Please Press a Key..
+23| ......................................
+24|
