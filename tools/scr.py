@@ -1,11 +1,13 @@
 import sys
 m=open(sys.argv[1],'rb').read()[2:]
 d=m[0x400:0x7e8]
+lower = '-l' in sys.argv   # lower/upper case charset (TSB demos switch to it)
 def ch(c):
     c&=0x7f
     if c==0: return '@'
-    if 1<=c<=26: return chr(64+c)
+    if 1<=c<=26: return chr(96+c) if lower else chr(64+c)
     if 32<=c<=63: return chr(c)
+    if lower and 65<=c<=90: return chr(c)
     return '.'
 for r in range(25):
     line=''.join(ch(b) for b in d[r*40:r*40+40]).rstrip()
