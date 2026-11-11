@@ -1,3 +1,4 @@
-sid 1200 frames: 37 distinct states
+sid: first note after 6 frames
+sid 1200 frames: 36 distinct states
 end: ok after 70 frames
-total 1270 frames
+total 1276 frames

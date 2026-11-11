@@ -7,7 +7,7 @@
 
 Options: --crt FILE (default build/TSBneo.crt), --d64 FILE (default corpus/tsbneo_260228.d64),
          --scenarios FILE (default tests/demos.json), --golden DIR (default tests/golden), -j N (parallel VICEs)
-         --video pal|ntsc, --kernal stock|jiffy, --dos stock|jiffy: the machine (default pal/stock/stock, the
+         --video pal|ntsc|oldntsc, --kernal stock|jiffy, --dos stock|jiffy: the machine (default pal/stock/stock, the
          configuration of all goldens; same as the env variables C64_VIDEO/C64_KERNAL/C64_DOS, see vicemon.py)
 
 Scenario (tests/demos.json, list "programs"):
@@ -31,7 +31,8 @@ Scenario (tests/demos.json, list "programs"):
       {"hold": "space", "frames": N}  hold a key in the matrix for N frames (for PEEK(197) polling)
       {"run": "NAME"}           LOAD+RUN another program in the same session (keeps REU contents)
       {"sid": N}                record SID registers every frame for N frames (states lasting >= 2 frames, repeats
-                                collapsed -> sid.bin)
+                                collapsed -> sid.bin); "from": "gate" starts at the first note (a voice's gate bit),
+                                so CPU-bound set-up time (PAL/NTSC, Neo/Ultra) does not move the window
     Any step may carry "cap": "label" to capture a checkpoint after it, and "expect": [regex,...] checked
     against that checkpoint's screen text. The state after the last step is always captured as "final".
 
@@ -43,6 +44,7 @@ import hashlib, json, os, re, shutil, struct, sys, tempfile, concurrent.futures 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vicemon, tsblist
 JIFFY_KERNAL = False   # set in main() from the machine (C64_KERNAL / --kernal)
+CRT_NAME = ""          # set in main(): --crt file name without .crt
 
 ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 PARTS = ["screen", "color", "bitmap", "charset", "vic", "sprites"]
@@ -79,9 +81,11 @@ def machine_screen(screen):
 
 def known_issue(sc):
     """The reason text if this scenario has a known, accepted difference on the current machine
-    (scenario field "known": [{"kernal": "jiffy", "why": "..."}, ...]; keys video/kernal/dos)."""
+    (scenario field "known": [{"kernal": "jiffy", "why": "..."}, ...]; keys video/kernal/dos, and "crt": a regex
+    the CRT file name (without .crt) must match, for differences that only the TSB Neo CRTs have)."""
     m = dict(zip(("video", "kernal", "dos"), vicemon.machine()))
     for k in sc.get("known", []):
+        if "crt" in k and not re.fullmatch(k["crt"], CRT_NAME): continue
         if all(m[x] == k[x] for x in ("video", "kernal", "dos") if x in k): return k["why"]
     return None
 KEYS = {"del": 0, "return": 1, "crsrright": 2, "f7": 3, "f1": 4, "f3": 5, "f5": 6, "crsrdown": 7,
@@ -344,6 +348,11 @@ def run_scenario(sc, crt, d64, outdir=None):
                 # one sample per frame; keep states that last >= 2 frames (a state seen for a single frame is
                 # BASIC caught half-way through setting several registers, which depends on timing), collapse repeats
                 samples = []
+                if s.get("from") == "gate":   # start at the first note (any voice's gate bit on), not at the step:
+                    waited = 0                # the BASIC set-up before PLAY is CPU-bound (PAL/NTSC, Neo/Ultra differ)
+                    while not any(r & 1 for r in v.mem(0xD404, 0xD412, "io")[0::7]) and waited < s.get("max", 3000):
+                        v.frames(1); waited += 1
+                    frames += waited; log.append(f"sid: first note after {waited} frames")
                 for _ in range(s["sid"]):
                     v.frames(1); samples.append(v.mem(0xD400, 0xD418, "io"))
                 trace = bytearray(); prev = None
@@ -467,8 +476,9 @@ def main(a):
         if x in opts: opts[x] = a.pop(0); explicit.add(x)
         elif x in ("--video", "--kernal", "--dos"): os.environ["C64_" + x[2:].upper()] = a.pop(0)
         else: args.append(x)
-    global JIFFY_KERNAL
+    global JIFFY_KERNAL, CRT_NAME
     JIFFY_KERNAL = vicemon.machine()[1] == "jiffy"
+    CRT_NAME = os.path.splitext(os.path.basename(opts["--crt"]))[0]
     if not args: print(__doc__); return 2
     mode, names = args[0], args[1:]
     if mode == "capture" and vicemon.machine_name() != "pal-stock-stock" and "--golden" not in explicit:

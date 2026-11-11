@@ -381,7 +381,12 @@
   {
    "bas": "tests/commands/tsb_session.bas",
    "disk": "scratch",
-   "known": [{"kernal": "jiffy", "why": "TSB Neo MERGE without a device number loads absolute under the JiffyDOS KERNAL (SA $6F) and overwrites the program; reports/2.0-machine-matrix.md"}],
+   "known": [
+    {
+     "kernal": "jiffy",
+     "why": "TSB Neo MERGE without a device number loads absolute under the JiffyDOS KERNAL (SA $6F) and overwrites the program; reports/2.0-machine-matrix.md"
+    }
+   ],
    "steps": [
     {
      "end": 1,
@@ -556,6 +561,59 @@
      "end": 1,
      "max": 600,
      "cap": "renumber_after_nrm"
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/merge_nodev.bas",
+   "disk": "scratch",
+   "known": [
+    {
+     "kernal": "jiffy",
+     "crt": "TSBneo|TSBUltra",
+     "why": "TSB Neo MERGE without a device number loads absolute under the JiffyDOS KERNAL (D-2.0a: Ultra fixes it; drop TSBUltra here when the fix lands)"
+    }
+   ],
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    },
+    {
+     "type": "\u0093save \"m\",8\r"
+    },
+    {
+     "end": 1,
+     "max": 3000
+    },
+    {
+     "type": "\u0093new\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "5 rem first\r"
+    },
+    {
+     "type": "merge \"m\"\r"
+    },
+    {
+     "end": 1,
+     "max": 3000
+    },
+    {
+     "type": "\u0093list\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "merged",
+     "expect": [
+      "5 rem first",
+      "10 print \"merged line\""
+     ]
     }
    ]
   }

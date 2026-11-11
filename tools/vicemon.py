@@ -10,12 +10,14 @@ Library use:
 
 CLI (what tools/run_crt.sh uses):
     vicemon.py run <crt|-> <dump.bin> <irqs> [--d64 X] [--type TEXT] [--png X]
-                   [--video pal|ntsc] [--kernal stock|jiffy] [--dos stock|jiffy] [-- extra x64sc args]
+                   [--video pal|ntsc|oldntsc] [--kernal stock|jiffy] [--dos stock|jiffy] [-- extra x64sc args]
     Writes a 2-byte-load-address + $0000-$07FF dump (same format as the old monitor 'save').
 
 Env: X64SC, VICE_DATA (see run_crt.sh).
 Machine (defaults = the configuration all goldens were captured on: PAL, stock KERNAL, stock 1541 ROM):
     C64_VIDEO  pal | ntsc        VICE -model c64 / -model ntsc (VIC-II, CIA and clock of that machine)
+               | oldntsc         VICE -model oldntsc: early NTSC C64, VIC-II 6567R56A (64 cycles/line, 262 lines);
+                                 optional, not in the default matrix
     C64_KERNAL stock | jiffy     jiffy: -kernal corpus/roms/JiffyDOS_C64/JiffyDOS_C64_6.01.bin
     C64_DOS    stock | jiffy     jiffy: -dos1541 corpus/roms/JiffyDOS_1541/JiffyDOS_1541-II_6.00.bin
                                  (drive type stays 1541 with true-drive emulation; the 16K image replaces
@@ -44,8 +46,8 @@ def machine():
     """(video, kernal, dos) from C64_VIDEO / C64_KERNAL / C64_DOS, checked."""
     m = (os.environ.get("C64_VIDEO", "pal").lower(), os.environ.get("C64_KERNAL", "stock").lower(),
          os.environ.get("C64_DOS", "stock").lower())
-    if m[0] not in ("pal", "ntsc") or m[1] not in ("stock", "jiffy") or m[2] not in ("stock", "jiffy"):
-        raise SystemExit(f"bad machine {m}: C64_VIDEO pal|ntsc, C64_KERNAL stock|jiffy, C64_DOS stock|jiffy")
+    if m[0] not in ("pal", "ntsc", "oldntsc") or m[1] not in ("stock", "jiffy") or m[2] not in ("stock", "jiffy"):
+        raise SystemExit(f"bad machine {m}: C64_VIDEO pal|ntsc|oldntsc, C64_KERNAL stock|jiffy, C64_DOS stock|jiffy")
     return m
 
 
@@ -63,7 +65,7 @@ def machine_args():
     """x64sc arguments for the selected machine. Placed after -default; -model first, so its
     defaults (KERNAL revision, VIC-II) do not override the ROM choices that follow."""
     video, kernal, dos = machine()
-    args = ["-model", "c64" if video == "pal" else "ntsc"]
+    args = ["-model", {"pal": "c64", "ntsc": "ntsc", "oldntsc": "oldntsc"}[video]]
     if kernal == "jiffy": args += ["-kernal", jiffy_rom("kernal")]
     if dos == "jiffy": args += ["-dos1541", jiffy_rom("dos")]
     return args

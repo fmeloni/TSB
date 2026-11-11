@@ -1,0 +1,12 @@
+end: ok after 70 frames
+type '\x93save "m",8\r'
+end: ok after 80 frames
+type '\x93new\r'
+end: ok after 70 frames
+type '5 rem first\r'
+type 'merge "m"\r'
+end: ok after 70 frames
+type '\x93list\r'
+end: ok after 80 frames
+  -> checkpoint 01_merged
+total 370 frames

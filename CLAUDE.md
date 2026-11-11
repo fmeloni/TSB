@@ -65,6 +65,13 @@ is used; the Classic Simons slot is dropped.
   Neo baseline on all 8 for the released CRT and the v0.1 EasyFlash CRT (reports/2.0-machine-matrix.md).
 - JiffyDOS ROMs are commercial: corpus/roms/ is git-ignored, never commit them.
 - Neo switches off the JiffyDOS function keys at boot (`stx $9b`, TSBneo/tsbneo.a line 336). Ultra must do the same.
+- **D-2.0a (decided):** MERGE under the JiffyDOS KERNAL: Neo keeps the bug (`MERGE "x"` without device loads absolute,
+  SA $6F); Ultra fixes it (secondary address 0 before MERGE's LOAD, so it always appends). Ultra gets a test for it
+  on kernal=jiffy.
+- **D-2.0b (pending Fafa; recommended):** TSB.HSG split screen on NTSC: Neo unchanged; Ultra adjusts the delay loop
+  from $02A6. Add a picture-based check of the split screen on PAL and NTSC (memory goldens can't see it).
+- Optional machine `oldntsc` (VICE `-model oldntsc`, VIC-II 6567R56A, 64 cycles/line): in tests/matrix.sh on request
+  only, not in the default runs until Fafa says whether his NTSC C64 has that chip.
 
 Ultra also publishes a compatibility address map (jiffy counter, hooks, entry points, settings) so
 Neo-only programs can be ported by changing addresses.
@@ -125,7 +132,7 @@ the cartridge ships as TSB Neo + GO 64 only.
   (tools/vicemon.py), with no window (SDL_VIDEODRIVER=dummy). The old -moncommands approach hung: SDL VICE ignores `quit`.
 - Demo baseline: `make test-demos` (44 scenarios: the 43 + do_test_fixed in tests/demos.json vs tests/golden/, ~6 min); see
   reports/1.3-demo-baseline.md. tools/tsblist.py lists TSB programs from the D64.
-- Command suite: `make test-commands` (21 scenarios in tests/commands.json, programs in tests/commands/*.bas,
+- Command suite: `make test-commands` (22 scenarios in tests/commands.json, programs in tests/commands/*.bas,
   goldens in tests/golden/commands/, ~1 min); see reports/1.2-command-suite.md.
 - Neo-only detector: tools/neodetect.py (`--load` for the LOAD,8,1 check); `make test` runs tests/detector.sh and
   tests/crunch_corpus.py.
@@ -134,7 +141,9 @@ the cartridge ships as TSB Neo + GO 64 only.
 - Machines: `--video pal|ntsc --kernal stock|jiffy --dos stock|jiffy` on tools/demo_capture.py and tools/vicemon.py
   (or env C64_VIDEO/C64_KERNAL/C64_DOS). VICE 3.10 options used: `-model c64|ntsc`, `-kernal <file>`, `-dos1541 <file>`.
   Goldens are pal-stock-stock only; JiffyDOS identity text (banner, drive ID) is mapped back before comparing;
-  accepted machine-specific differences are a scenario's `known` list (status KNOWN). `tests/matrix.sh change|gate|disk`.
+  accepted machine-specific differences are a scenario's `known` list (status KNOWN; optional `"crt"` regex for
+  Neo-only differences). `tests/matrix.sh change|gate|disk|oldntsc`. The music SID traces start at the first note
+  (`"from": "gate"`). A sprite failure in a parallel run: rerun it alone first (load-dependent keypress timing).
 - ACME is needed for `make build` (`brew install acme`, or tools/setup-linux.sh on Linux).
 
 ## Rules

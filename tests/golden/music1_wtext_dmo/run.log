@@ -1,3 +1,4 @@
-sid 1500 frames: 62 distinct states
-end: ok after 100 frames
-total 1600 frames
+sid: first note after 6 frames
+sid 1400 frames: 55 distinct states
+end: ok after 190 frames
+total 1596 frames

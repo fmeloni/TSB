@@ -1117,7 +1117,7 @@
   {
    "name": "DIRSELECT.DMO",
    "kind": "demo",
-   "notes": "box position uses RND(0) (CIA timers), so only the text content is compared",
+   "notes": "box position uses RND(0) (CIA timers), so only the text content is compared; the box can cover the 'Ende mit' line (EasyFlash CRT with JiffyDOS drive), so only the disk name is expected",
    "compare": [],
    "steps": [
     {
@@ -1125,8 +1125,7 @@
      "max": 4000,
      "cap": "selector",
      "expect": [
-      "tsb neo 2.60228",
-      "ende mit"
+      "tsb neo 2.60228"
      ]
     },
     {
@@ -1246,7 +1245,7 @@
    "kind": "demo",
    "steps": [
     {
-     "sid": 1500
+     "sid": 1400, "from": "gate"
     },
     {
      "end": 1,
@@ -1259,7 +1258,7 @@
    "kind": "demo",
    "steps": [
     {
-     "sid": 1500
+     "sid": 1500, "from": "gate"
     },
     {
      "end": 1,
@@ -1272,7 +1271,7 @@
    "kind": "demo",
    "steps": [
     {
-     "sid": 1200
+     "sid": 1200, "from": "gate"
     },
     {
      "end": 1,
