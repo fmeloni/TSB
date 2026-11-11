@@ -949,10 +949,121 @@
    "expect": [
     "bad mode  error in 130"
    ],
-   "notes": "stops with ?BAD MODE ERROR IN 130 on TSB Neo: FETCH into a numeric variable",
+   "notes": "stops with ?BAD MODE ERROR IN 130 on TSB Neo: FETCH into a numeric variable. Task 1.5 (11 Nov): the original stays as it is; the corrected copy is scenario do_test_fixed",
    "steps": [
     {
      "end": 1
+    }
+   ]
+  },
+  {
+   "bas": "tests/corpus/do-test-fixed.bas",
+   "id": "do_test_fixed",
+   "kind": "demo",
+   "notes": "Corrected copy of DO-TEST.DMO (FETCH into E$, decision 11 Nov, task 1.5). Walks menus A, B, C, D and quits.",
+   "steps": [
+    {
+     "stable": 60,
+     "max": 3000,
+     "cap": "menu_a",
+     "expect": [
+      "menue a",
+      "7.\\) beenden"
+     ]
+    },
+    {
+     "type": "2\r"
+    },
+    {
+     "stable": 30,
+     "max": 600,
+     "cap": "border_white"
+    },
+    {
+     "type": "4\r"
+    },
+    {
+     "stable": 30,
+     "max": 600,
+     "cap": "menu_b",
+     "expect": [
+      "menue b"
+     ]
+    },
+    {
+     "type": "2\r"
+    },
+    {
+     "stable": 30,
+     "max": 600,
+     "cap": "border_violet"
+    },
+    {
+     "type": "4\r"
+    },
+    {
+     "stable": 30,
+     "max": 600,
+     "expect": [
+      "menue a"
+     ]
+    },
+    {
+     "type": "5\r"
+    },
+    {
+     "stable": 30,
+     "max": 600,
+     "expect": [
+      "menue c"
+     ]
+    },
+    {
+     "type": "3\r"
+    },
+    {
+     "stable": 30,
+     "max": 600,
+     "cap": "border_orange"
+    },
+    {
+     "type": "4\r"
+    },
+    {
+     "stable": 30,
+     "max": 600
+    },
+    {
+     "type": "6\r"
+    },
+    {
+     "stable": 30,
+     "max": 600,
+     "expect": [
+      "menue d"
+     ]
+    },
+    {
+     "type": "1\r"
+    },
+    {
+     "stable": 30,
+     "max": 600,
+     "cap": "border_brown"
+    },
+    {
+     "type": "4\r"
+    },
+    {
+     "stable": 30,
+     "max": 600
+    },
+    {
+     "type": "7\r"
+    },
+    {
+     "end": 1,
+     "max": 600
     }
    ]
   },
@@ -973,11 +1084,14 @@
    "reject": [
     "\\?[a-z0-9 ]+error"
    ],
-   "notes": "Works with the emulated 1541 (true drive): lists drive 8, then '1 Drive connected.' The earlier ?DEVICE NOT PRESENT ERROR IN 230 came from VICE's virtual IEC device (-busdevice8), which returned ST=-125",
+   "notes": "Works with the emulated 1541 (true drive): lists drive 8, then '1 Drive connected.' The earlier ?DEVICE NOT PRESENT ERROR IN 230 came from VICE's virtual IEC device (-busdevice8), which returned ST=-125. Timing-fragile (11 Nov): the program tests ST=-128 exactly, and device 16 sometimes answers -125 (not present + timeout bits) depending on when RETURN is pressed; then it ends with ?DEVICE NOT PRESENT ERROR IN 230. With RETURN delayed 0-5 frames, the released CRT fails at +3 and the EasyFlash CRT at +0. The scenario presses RETURN 1 frame after the start screen is stable, which passes on both (reports/1.4-easyflash-crt.md)",
    "steps": [
     {
      "stable": 120,
      "cap": "start"
+    },
+    {
+     "frames": 1
     },
     {
      "type": "\r"

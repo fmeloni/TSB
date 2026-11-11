@@ -148,6 +148,14 @@ class Vice:
     def resume(self):
         self.cmd(0xAA)
 
+    def reset(self, hard=False):
+        """Reset the machine (cartridges see the reset line too) and keep it running."""
+        self.cmd(0xCC, bytes([1 if hard else 0]))
+
+    def set_register(self, rid, value):
+        """Set one CPU register (VICE ids as in registers(): 0 A, 1 X, 2 Y, 3 PC, 4 SP, 5 flags)."""
+        self.cmd(0x32, struct.pack("<BHBBH", 0, 1, 3, rid, value))
+
     def checkpoint(self, addr, op=4):
         b = self.cmd(0x12, struct.pack("<HHBBBB", addr, addr, 1, 1, op, 0))
         return struct.unpack("<I", b[:4])[0]

@@ -6,8 +6,10 @@
 - `demo_capture.py` runs the scenarios in `tests/demos.json` (demos) and `tests/commands.json` (command suite)
   and captures/checks `tests/golden/` and `tests/golden/commands/`.
 - `tsblist.py` lists TSB/Simons' BASIC programs from a D64 using TSB's own keyword table; `crunch()`/`make_prg()`
-  tokenize text exactly like TSB Neo (its tokenizer, then V2 CRUNCH).
-- `neodetect.py` is the Neo-only detector (rules N1-N6, reports/1.3-detector.md).
+  tokenize text exactly like TSB Neo (its tokenizer, then V2 CRUNCH); `ultra=True` applies Ultra's fix
+  (reports/1.5-tokenizer-collisions.md).
+- `neodetect.py` is the Neo-only detector (rules N1-N6, `--load` for the LOAD,8,1 check, reports/1.3-detector.md).
+- `mkcrt.py` writes and dumps EasyFlash CRTs (reports/1.4-easyflash-crt.md).
 - `cmd_coverage.py` counts which TSB and V2 keywords the command suite exercises.
 - `scr.py` turns a dump into text.
 

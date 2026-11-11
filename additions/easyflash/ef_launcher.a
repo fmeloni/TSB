@@ -1,0 +1,103 @@
+; -----------------------------------------------------------------------------
+; TSB Ultra v0.1 - EasyFlash ROML stream, banks 0-2 at $8000 (plan task 1.4)
+;
+; This is the Magic Desk launcher 1.01 of the released TSBneo CRT
+; (additions/create_magicdesk_crt.a, by Peter Alexander, changes by A. Dettke)
+; moved to EasyFlash. Bank layout and code are byte-identical to the released
+; CRT's ROML banks 0-2, except the two bytes that switch the cartridge off:
+;   Magic Desk: lda #$80 : sta $de00   (bank register bit 7 = off)
+;   EasyFlash : lda #$04 : sta $de02   (control register: ROM off)
+; The bank register is $de00 on both, so selecting banks 1 and 2 is unchanged.
+;
+; The KERNAL starts this through CBM80 after ef_boot.a has put the EasyFlash
+; into 8K mode (ROML at $8000), as the Magic Desk hardware does by itself.
+; -----------------------------------------------------------------------------
+
+	* = $8000
+
+	!ct pet
+
+	!word launcher
+	!word launcher
+	!tx "CBM80"
+
+infotext	!by $93,$11,$11,$11
+	!tx "  Please wait, TSBNeo is initializing",0
+
+launcher	sei
+	stx $d016
+	jsr $fda3		; prepare irq
+	jsr $fd50		; init memory
+	jsr $fd15		; init i/o
+	jsr $ff5b		; init video
+	lda #11		; set launcher colors
+	ldx #12
+	sta $d020
+	stx $d021
+	lda #0
+	sta $286
+
+	lda #23		; lower/upper case
+	sta $d018
+
+ 	ldy #0
+-	lda infotext,y
+	beq +
+	jsr $ffd2
+	iny
+ 	bne -
+
++	lda #<mainprg	; tsb.neo
+	ldx #>mainprg
+	sta $03
+	stx $04
+	lda #$00		; to $8000
+	ldx #$80
+	sta $05
+	stx $06
+	ldy #.endcopy - .startcopy
+-	lda .startcopy-1,y
+	sta $ff,y
+	dey
+	bne -
+	jmp $0100
+
+; copies TSB Neo from the cartridge to RAM $8000-$cfff, runs at $0100
+.startcopy
+!pseudopc $0100  {
+
+	lda $02		; save $02
+	pha
+	lda #0		; bank indicator
+	sta $02
+	ldx #0
+	ldy #0
+-	lda ($03,x)	; source
+	sta ($05),y	; destination
+	inc $03
+	bne +
+	inc $04
+	lda $04
+	cmp #$a0		; after $2000 bytes...
+	bne +
+	lda #$80
+	sta $04
+	inc $02		; ...next bank, next $2000 bytes
+	lda $02
+	sta $de00		; EasyFlash bank register, as on Magic Desk
++	iny
+	bne -
+	inc $06
+	lda $06
+	cmp #$d0		; and then up to $d000
+	bcc -
+	lda #$04		; EasyFlash: cartridge ROM off (Magic Desk: lda #$80)
+	sta $de02		; (Magic Desk: sta $de00)
+
+	pla		; restore $02
+	sta $02
+	jmp ($8000)	; start TSB
+}
+.endcopy
+
+mainprg	!bin "../../build/tsbneo_ref.bin"	; TSB Neo 2.60.228 image $8000-$cfff

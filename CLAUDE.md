@@ -22,7 +22,8 @@ is used; the Classic Simons slot is dropped.
    Y: switch to Neo keeping the program in memory (only if it fits: ≤ 30,719 bytes, ending below $8000;
    variables cleared as after RUN), then RUN it. N: run it in Ultra anyway.
    The detector reads literal addresses only ("seems to"); rules and their check against the demo disk:
-   reports/1.3-detector.md, tools/neodetect.py.
+   reports/1.3-detector.md, tools/neodetect.py. The same warning also fires at `LOAD"x",8,1` when the file's
+   header load address is in $8000–$CFFF (decision 11 Nov, task 5.3); everything else is checked at RUN.
 5. Delivered as an **EasyFlash CRT** (hardware type 32, up to 1 MB), flashable with EasyProg on EasyFlash /
    EasyFlash 3, loadable on Kung Fu Flash and Ultimate 64 / 1541 Ultimate.
 6. At the end: **memory maps** of stock C64, TSB Neo and TSB Ultra side by side in the pagetable.com style,
@@ -36,6 +37,25 @@ is used; the Classic Simons slot is dropped.
    (first line 5 leading spaces, centred; second line 1 leading space). The byte count is calculated at
    boot like a stock C64 (MEMSIZ − TXTTAB: $D000 − $0801 = 51199), never a typed-in constant. Gate G6 gets a pixel-exact
    golden of this screen.
+## Decisions (Fafa, 11 Nov)
+1. **SWITCHSCREEN is Neo-only.** Target: **20 Neo-only / 19 Ultra** of the 39 demos (the 19 in
+   reports/1.3-demo-baseline.md plus SWITCHSCREEN, flagged by the U2+ rule N5). tests/detector/expected.json
+   enforces it (`_target`). Gate wording from now on: G1 "detector rules flag the 20 Neo-only programs and none of
+   the other 19"; G4 "the 19 Ultra-compatible demos match their goldens in Ultra"; G5 "no warning on the 19
+   Ultra-compatible demos". (The plan's gate table still says 19/20 until it is updated from the chat.)
+2. **LOAD-time warning:** `LOAD"x",8,1` with a header load address in $8000–$CFFF gives the Neo-only warning
+   (task 5.3). Everything else is checked at RUN. On the demo disk 8 files would warn (`neodetect.py --load`,
+   list in expected.json `_load_warn`); none of the 19 Ultra demos loads one.
+3. **SECURE in Ultra gives an error instead of hanging** (task 4.1). Neo is untouched (it still hangs).
+4. **DISPLAY with MEM on returns the real new screen address in Ultra** (task 4.3), i.e. where Ultra keeps the
+   MEM screen, not Neo's $CC00.
+5. **Task 1.5:** the test corpus gets a corrected copy of DO-TEST.DMO (FETCH into a string variable); the original
+   disk stays untouched. OLD-AT stays as it is. IMG VIEWER always runs with an REU.
+6. **Tokenizer:** Neo keeps the ELSEOPEN bug; Ultra fixes it. The whole class (a TSB keyword whose stored index
+   byte plus the following text reads as a V2 keyword) is listed in reports/1.5-tokenizer-collisions.md. Ultra must
+   produce Neo's exact bytes for every line Neo tokenizes correctly (all 1966 corpus lines and all command
+   scenarios); the fixed cases are marked as intended differences.
+
 Ultra also publishes a compatibility address map (jiffy counter, hooks, entry points, settings) so
 Neo-only programs can be ported by changing addresses.
 Open decisions: D3 public vs personal release (interpreter base, licensing), D4 acceptable Ultra
@@ -62,10 +82,22 @@ the cartridge ships as TSB Neo + GO 64 only.
   hook vectors); see the table in reports/1.3-demo-baseline.md. IMG VIEWER and WRITEIMAGES2REU need an REU.
 - The harness must not pass -busdevice8: it makes VICE's virtual IEC device answer instead of the emulated 1541
   (status "73,VIRTUAL DRIVE EMULATION V3.5"). With the real 1541 emulation SHOW DRIVES works; only DO-TEST, OLD-AT
-  and IMG VIEWER without REU misbehave on Neo.
+  and IMG VIEWER without REU misbehave on Neo (handled by decision 5 of 11 Nov).
 - TSB's tokenizer: TSB keywords first (table order), then V2 CRUNCH; index bytes that V2 crunches into operator tokens
   are stored EOR $8F (X!, CLS, MAP). Bug: typed ELSEOPEN becomes NO ERROR+"PEN". tools/tsblist.crunch mirrors it
   (1966/1967 corpus lines byte-identical; the odd one cannot be typed).
+- The released CRT holds the **disk** build of TSB Neo (`cartridge = 0`: SECURE is keyword 64, overlays load from disk),
+  not the `cartridge = 1` variant (MONITOR as keyword 64, LOCAL/GLOBAL = BAD MODE), which was never released.
+  build/tsbneo_ref.bin = disk build with the key-table padding $C657-$C74F as $00 = the released image, byte for byte.
+- TSB Ultra v0.1 (task 1.4) = build/TSBUltra.crt, EasyFlash: boot code in ROMH bank 0, the released launcher + TSB image
+  in ROML banks 0-2 (2 bytes differ: cart off via $DE02=$04). Same 64K RAM at READY as the released CRT. Commodore key
+  held at reset = GO 64 path (stock C64). reports/1.4-easyflash-crt.md.
+- EasyFlash RAM at $DF00-$DFFF overlaps the REU registers: with both in VICE, reads of $DF00 return EasyFlash RAM; DMA
+  still works. TSB Neo writes $DF01-$DF08 at boot. Ultra's $DF00 code (task 2.1) must avoid $DF00-$DF0A.
+- SHOW DRIVES is timing-fragile (ST=-128 test; device 16 sometimes -125), on the released CRT too.
+- Tokenizer collision class (decision 6): 18 keywords whose number byte is a letter, 68 combinations,
+  reports/1.5-tokenizer-collisions.md. Ultra rule: tools/tsblist.crunch(ultra=True); 12,905 lines typed into Neo are in
+  tests/tokenizer/neo_typed.tsv. DO's number byte is `"`: the rest of a DO line is plain text by design (DONE, DO NULL).
 - A LOAD inside a program restarts it from the first line with variables kept, also TSB's LOAD name,dev,0,addr
   (hence the corpus idiom IF A=0 THEN A=1:LOAD ...). SECURE (ON/OFF/0) hangs TSB Neo.
 
@@ -77,11 +109,14 @@ the cartridge ships as TSB Neo + GO 64 only.
   (program names in lower case; -l decodes the lower/upper case charset).
 - macOS harness verified (10 Nov): `make test` passes in ~9 s. VICE is driven through its binary monitor
   (tools/vicemon.py), with no window (SDL_VIDEODRIVER=dummy). The old -moncommands approach hung: SDL VICE ignores `quit`.
-- Demo baseline: `make test-demos` (43 scenarios in tests/demos.json vs tests/golden/, ~6 min); see
+- Demo baseline: `make test-demos` (44 scenarios: the 43 + do_test_fixed in tests/demos.json vs tests/golden/, ~6 min); see
   reports/1.3-demo-baseline.md. tools/tsblist.py lists TSB programs from the D64.
 - Command suite: `make test-commands` (21 scenarios in tests/commands.json, programs in tests/commands/*.bas,
   goldens in tests/golden/commands/, ~1 min); see reports/1.2-command-suite.md.
-- Neo-only detector: tools/neodetect.py; `make test` runs tests/detector.sh and tests/crunch_corpus.py.
+- Neo-only detector: tools/neodetect.py (`--load` for the LOAD,8,1 check); `make test` runs tests/detector.sh and
+  tests/crunch_corpus.py.
+- EasyFlash CRT: `make build` makes build/TSBUltra.crt; `make test` runs tests/ef_tsbultra.py. Baselines on it:
+  tests/demos_tsbneo.sh build/TSBUltra.crt, tests/commands_tsbneo.sh build/TSBUltra.crt.
 - ACME is needed for `make build` (`brew install acme`, or tools/setup-linux.sh on Linux).
 
 ## Rules

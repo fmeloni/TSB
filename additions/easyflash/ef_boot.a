@@ -1,0 +1,62 @@
+; -----------------------------------------------------------------------------
+; TSB Ultra v0.1 - EasyFlash boot code, bank 0 ROMH (plan task 1.4)
+;
+; At power-on and on every reset the EasyFlash starts in Ultimax mode with bank 0:
+; ROML at $8000, ROMH at $e000, no KERNAL. The CPU takes the reset vector from
+; here. The code copies a short trampoline to RAM, leaves Ultimax mode and enters
+; the KERNAL reset, which then finds CBM80 in ROML bank 0 (ef_launcher.a).
+;
+; GO 64 path: with the Commodore key held at reset the trampoline switches the
+; cartridge off instead and enters the KERNAL reset: a stock C64, 38911 BYTES FREE.
+; (TSB Neo's own marker at $8004 is "cbm80" in lower-case PETSCII, $43 $42 $4d,
+; which the KERNAL does not accept, so TSB in RAM never autostarts.)
+; In the finished cartridge GO 64 (task 5.1) jumps to the same path.
+;
+; EasyFlash control register $de02 (bit 2 M=1: bits 1/0 drive EXROM/GAME):
+;   $04 ROM off   $05 Ultimax   $06 8K (ROML at $8000)   $07 16K
+; -----------------------------------------------------------------------------
+
+	tramp	= $0200		; BASIC input buffer, unused at reset
+
+	* = $e000
+
+reset	sei
+	ldx #$ff
+	txs
+	cld
+	ldx #tend - tstart - 1
+-	lda tstart,x
+	sta tramp,x
+	dex
+	bpl -
+	lda #$00		; CIA 1: port A out, port B in, scan column 7
+	sta $dc03
+	lda #$ff
+	sta $dc02
+	lda #$7f
+	sta $dc00
+	ldy #$06		; default: 8K mode, TSB Neo launcher
+	lda $dc01
+keytest	and #$20		; Commodore key (row 5 of column 7) down?
+	bne +
+	ldy #$04		; yes: GO 64, cartridge off
++	lda #$ff
+	sta $dc00
+	lda #$00
+	sta $dc02
+	sta $de00		; bank 0
+	jmp tramp
+
+tstart
+!pseudopc tramp {
+	sty $de02		; leave Ultimax mode: $06 8K or $04 off
+	jmp $fce2		; KERNAL reset
+}
+tend
+
+nmi	rti
+
+	* = $fffa
+	!word nmi		; NMI
+	!word reset	; RESET
+	!word nmi		; IRQ/BRK (interrupts stay off until the KERNAL runs)

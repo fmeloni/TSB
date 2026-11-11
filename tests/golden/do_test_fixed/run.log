@@ -1,0 +1,30 @@
+stable 60: ok after 80 frames
+  -> checkpoint 01_menu_a
+type '2\r'
+stable 30: ok after 40 frames
+  -> checkpoint 02_border_white
+type '4\r'
+stable 30: ok after 50 frames
+  -> checkpoint 03_menu_b
+type '2\r'
+stable 30: ok after 40 frames
+  -> checkpoint 04_border_violet
+type '4\r'
+stable 30: ok after 50 frames
+type '5\r'
+stable 30: ok after 50 frames
+type '3\r'
+stable 30: ok after 40 frames
+  -> checkpoint 05_border_orange
+type '4\r'
+stable 30: ok after 40 frames
+type '6\r'
+stable 30: ok after 50 frames
+type '1\r'
+stable 30: ok after 40 frames
+  -> checkpoint 06_border_brown
+type '4\r'
+stable 30: ok after 40 frames
+type '7\r'
+end: ok after 70 frames
+total 590 frames

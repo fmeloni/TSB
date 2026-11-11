@@ -6,7 +6,7 @@ BUILD := build
 .PHONY: all build test test-demos test-commands clean
 all: build
 
-build: $(BUILD)/tsbneo_disk.prg $(BUILD)/tsbneo_cart.bin
+build: $(BUILD)/tsbneo_disk.prg $(BUILD)/tsbneo_cart.bin $(BUILD)/TSBUltra.crt
 
 $(BUILD)/tsbneo_disk.prg: TSBneo/tsbneo.a TSBneo/memhook.inc TSBneo/MD_memhook.inc
 	@mkdir -p $(BUILD)
@@ -18,13 +18,26 @@ $(BUILD)/tsbneo_cart.bin: TSBneo/tsbneo.a TSBneo/memhook.inc TSBneo/MD_memhook.i
 	cp TSBneo/*.inc $(BUILD)/cartsrc/
 	cd $(BUILD)/cartsrc && $(ACME) -f plain -o ../tsbneo_cart.bin -l ../tsbneo_cart.lbl tsbneo.a
 
+# TSB Neo exactly as in the released CRT: the disk build with the key-table padding $c657-$c74f as $00
+# (the source pads with $ea). tests/ef_tsbultra.sh checks it against build/TSBneo.crt when that is present.
+$(BUILD)/tsbneo_ref.bin: $(BUILD)/tsbneo_disk.prg
+	python3 -c "import sys; b=bytearray(open(sys.argv[1],'rb').read()[2:]); b[0x4657:0x4750]=bytes(0 if c==0xea else c for c in b[0x4657:0x4750]); open(sys.argv[2],'wb').write(b)" $< $@
+
+# TSB Ultra v0.1 (task 1.4): EasyFlash CRT that starts TSB Neo; Commodore key at reset = GO 64 path.
+$(BUILD)/TSBUltra.crt: $(BUILD)/tsbneo_ref.bin additions/easyflash/ef_launcher.a additions/easyflash/ef_boot.a tools/mkcrt.py
+	cd additions/easyflash && $(ACME) -f plain -o ../../$(BUILD)/ef_roml.bin -l ../../$(BUILD)/ef_roml.lbl ef_launcher.a
+	cd additions/easyflash && $(ACME) -f plain -o ../../$(BUILD)/ef_romh0.bin -l ../../$(BUILD)/ef_romh0.lbl ef_boot.a
+	python3 tools/mkcrt.py easyflash $@ "TSB ULTRA 0.1" $(BUILD)/ef_roml.bin $(BUILD)/ef_romh0.bin
+
 # TSB_CRT: the released TSBneo Magic Desk CRT (not in git); copy it to build/TSBneo.crt or pass TSB_CRT=...
 TSB_CRT ?= $(BUILD)/TSBneo.crt
 test: build
 	tests/boot_tsbneo.sh $(TSB_CRT)
+	python3 tests/ef_tsbultra.py
 	tests/detector.sh
 	python3 tests/crunch_corpus.py
 	python3 tests/no_rom_in_goldens.py
+	python3 tests/corpus_fixed.py
 
 # Demo baseline (task 1.3): all corpus programs against tests/golden/, several minutes.
 test-demos: build
