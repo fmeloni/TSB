@@ -102,9 +102,12 @@ def _tsb_table():
     return bytes(t) + b"\0"
 
 
-def crunch(text, table=None):
+def crunch(text, table=None, ultra=False):
     """Tokenize one line body the way TSB Neo does: TSB's tokenizer (tsbneo.a 'tokenize'), then the
-    BASIC V2 CRUNCH at $A57C. Returns the stored bytes (without line link/number/terminator)."""
+    BASIC V2 CRUNCH at $A57C. Returns the stored bytes (without line link/number/terminator).
+    ultra=True: TSB Ultra's rule (decision 11 Nov, reports/1.5-tokenizer-collisions.md): a letter index byte
+    ($41-$5A) right after the TSB prefix $64 is stored as it is instead of starting a V2 keyword. Neo lets
+    V2 CRUNCH read it, so ELSE+OPEN ($64 'G' "OPEN") becomes $64 GO "PEN" = NO ERROR+PEN."""
     tab = table or _tsb_table()
     b = bytearray(_rawbytes(text)); y = 0
     while y < len(b):                                   # --- TSB pass
@@ -147,6 +150,8 @@ def crunch(text, table=None):
         if c == 0x3F: out.append(0x99); x += 1; continue
         if 0x30 <= c < 0x3C:
             out.append(c); x += 1; data = data and c != 0x3A; continue
+        if ultra and c == 0x64 and x + 1 < len(b) and (0x41 <= b[x + 1] <= 0x5A or b[x + 1] == 0x64):
+            out += b[x:x + 2]; x += 2; continue      # letter index kept; index $64 (CMOB) is not a new prefix
         tok = None
         for i, w in enumerate(V2B):
             n = len(w)
@@ -161,7 +166,7 @@ def crunch(text, table=None):
     return bytes(out)
 
 
-def make_prg(lines, start=0x0801, table=None):
+def make_prg(lines, start=0x0801, table=None, ultra=False):
     """[(number, text)] or ["10 PRINT ..."] -> PRG bytes (load address + linked lines)."""
     tab = table or _tsb_table(); body = bytearray(); a = start
     for ln in lines:
@@ -169,7 +174,7 @@ def make_prg(lines, start=0x0801, table=None):
             num, _, text = ln.strip().partition(" "); num = int(num)
         else:
             num, text = ln
-        c = crunch(text, tab); nxt = a + 4 + len(c) + 1
+        c = crunch(text, tab, ultra); nxt = a + 4 + len(c) + 1
         body += bytes([nxt & 255, nxt >> 8, num & 255, num >> 8]) + c + b"\0"; a = nxt
     return bytes([start & 255, start >> 8]) + body + b"\0\0"
 
