@@ -4,3 +4,6 @@ corpus/simons/
 .DS_Store
 __pycache__/
 !tests/golden/**/run.log
+
+# Commercial / copyrighted ROMs and disk images: never commit
+corpus/roms/
