@@ -6,4 +6,5 @@ python3 tests/detector/run_cases.py > build/detector_cases.log || { cat build/de
 D64=${D64:-corpus/tsbneo_260228.d64}
 if [ ! -f "$D64" ]; then echo "PASS detector cases ($(grep -c '^ok' build/detector_cases.log)); SKIP corpus check: $D64 missing"; exit 0; fi
 python3 tools/neodetect.py "$D64" --check tests/detector/expected.json > build/detector_corpus.log || { cat build/detector_corpus.log; echo "FAIL detector corpus"; exit 1; }
-echo "PASS detector ($(grep -c '^ok' build/detector_cases.log) cases; corpus: $(tail -1 build/detector_corpus.log))"
+python3 tools/neodetect.py "$D64" --load --check tests/detector/expected.json > build/detector_load.log || { cat build/detector_load.log; echo "FAIL detector LOAD,8,1 check"; exit 1; }
+echo "PASS detector ($(grep -c '^ok' build/detector_cases.log) cases; corpus: $(tail -1 build/detector_corpus.log); $(tail -1 build/detector_load.log))"

@@ -24,7 +24,11 @@ Rules (an address A is "in TSB" when $8000 <= A <= $CFFF, the RAM TSB Neo occupi
   X   exemption: once a literal POKE 56,hi (MEMTOP high byte) or D!POKE 55,addr appears, addresses from that
       page up to $CFFF no longer count for N1-N3/N5/N6 (the program reserved them; Ultra-native style).
   i   info only: LOAD name,dev,1 with no address (target known only from the file header). Not a flag
-      at RUN; see reports/1.3-detector.md for the LOAD-time check.
+      at RUN: the LOAD-time check below covers it.
+
+LOAD-time check (decided 11 Nov, task 5.3): LOAD"x",8,1 of a file whose header load address is in $8000-$CFFF
+gives the same warning when the load starts; everything else is checked at RUN.
+  neodetect.py <disk.d64> --load [--check expect.json]   files on the disk that would warn at LOAD"x",8,1
 """
 import json
 import os
@@ -209,12 +213,45 @@ def programs(d64):
             yield name, f
 
 
+def load_warns(load_addr):
+    """The LOAD-time rule: a secondary-address-1 load whose header address lies in TSB's RAM."""
+    return TSB_LO <= load_addr <= TSB_HI
+
+
+def load_table(d64):
+    d = open(d64, "rb").read()
+    for name, ty, blocks, t, s in tsblist.directory(d):
+        if ty != 2: continue
+        f = tsblist.read_file(d, t, s)
+        if len(f) < 2: continue
+        a = f[0] | f[1] << 8
+        yield name, a, a + len(f) - 3, load_warns(a)
+
+
+def main_load(a, check):
+    bad = 0
+    want = set(check.get("_load_warn", [])) if check else None
+    for name, lo, hi, w in load_table(a[0]):
+        mark = "WARN" if w else "    "
+        note = "  (ends in TSB RAM)" if not w and lo < TSB_LO <= hi else ""
+        line = f"{mark} {name:18} ${lo:04X}-${hi:04X}{note}"
+        if want is not None:
+            ok = (name in want) == w
+            line = ("ok   " if ok else "FAIL ") + line; bad += not ok
+        print(line)
+    if want is not None:
+        print(f"LOAD,8,1 warnings: {sum(1 for x in load_table(a[0]) if x[3])}; {bad} mismatch(es)")
+    return 1 if bad else 0
+
+
 def main(a):
     verbose = "-v" in a; as_json = "--json" in a
     a = [x for x in a if x not in ("-v", "--json")]
     check = None
     if "--check" in a:
         i = a.index("--check"); check = json.load(open(a[i + 1])); a = a[:i] + a[i + 2:]
+    if "--load" in a:
+        return main_load([x for x in a if x != "--load"], check)
     words = tsblist.tsb_words()
     if a[0].lower().endswith(".prg"):
         progs = [(os.path.basename(a[0]), open(a[0], "rb").read())]
@@ -251,6 +288,14 @@ def main(a):
         for n in missing:
             print(f"FAIL {n}: expected program not found"); bad += 1
         n_neo = sum(r["neo_only"] for r in results.values())
+        target = check.get("_target")
+        if target:  # the demo counts the gates use (G1/G4/G5): sets neo and ultra, verdicts as found
+            for st, want_neo in (("neo", True), ("ultra", False)):
+                got = sum(1 for n, r in results.items()
+                          if check.get(n, {}).get("set") == st and r["neo_only"] == want_neo)
+                if got != target[st]:
+                    print(f"FAIL target {st}: {got} programs, expected {target[st]}"); bad += 1
+            print(f"demos: {target['neo']} Neo-only, {target['ultra']} Ultra (target)")
         print(f"{n_neo} flagged, {len(results) - n_neo} not flagged; {bad} mismatch(es)")
     return 1 if bad else 0
 
