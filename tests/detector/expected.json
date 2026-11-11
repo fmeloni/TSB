@@ -1,0 +1,185 @@
+{
+ "_comment": "Expected Neo-only verdicts for every BASIC program on corpus/tsbneo_260228.d64. 'set': plan19 = the 19 Neo-only programs of the plan (reports/1.3-demo-baseline.md address table); u2plus = flagged only by the U2+ rule N5; ultra = must run in Ultra without a warning; system = the disk loader, not one of the 39. See reports/1.3-detector.md.",
+ "TSB": {
+  "neo_only": true,
+  "set": "system",
+  "why": "disk loader: POKEs $8082/$C023/$C58C, SYS $C000"
+ },
+ "TSBDEMO.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "PEEK($8B11/$8B12) version check, POKE $C62C; also N5 (screen editor at $C000)"
+ },
+ "FONTDEMO2.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "POKE/PEEK $C516 (TSB jiffy counter)"
+ },
+ "TEXT-IN-GFX.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "POKE $B903/$B912 (patches PAUSE); also N5"
+ },
+ "GRAFIKFONTS.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "POKE $B34B (patches TEXT)"
+ },
+ "IMG VIEWER.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "PEEK($C02C) (directory text at $C000); also N5"
+ },
+ "(B)FLASH.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "WAIT $C5C7, POKE/PEEK $C516"
+ },
+ "MAYHEM.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "POKE $A5D7/$A5DB (patches SCRLD)"
+ },
+ "4FACHZOOM.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "POKE $9519 (patches MEMPEEK), $C516"
+ },
+ "SCREENS.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "SYS $8B65 (TSB get-variable), POKE $CA00"
+ },
+ "MAP.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "D!POKE $897E hook vector, LOAD to $CB00"
+ },
+ "MULTIMAP.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "D!POKE $897E, POKE $99CE-$99D0 (patches MEM), SCRLD DEF $CB"
+ },
+ "BLOCKCOPY.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "SYS $A3EC"
+ },
+ "DIRSELECT.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "LOAD EXT.DIRSELECT to $C000, SYS $C000, PEEK($C00C)"
+ },
+ "WRITEIMAGES2REU": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "PEEK($C02C); also N5"
+ },
+ "SOUND2.DMO": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "POKE/PEEK $C516"
+ },
+ "NEOÂÌISTER 1.03": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "NEO-BLISTER: extensions to $C000/$CA00, D!POKE $897C, TSB work variables"
+ },
+ "SMON": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "D!POKE $0308,$80DC (execute vector into TSB)"
+ },
+ "EXTINSTALLER.TSB": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "D!PEEK/SYS $C000, SCRLD DEF $C0"
+ },
+ "OLD-AT.TSB": {
+  "neo_only": true,
+  "set": "plan19",
+  "why": "PEEK $8B18, $947D (TSB version check)"
+ },
+ "SWITCHSCREEN.DMO": {
+  "neo_only": true,
+  "set": "u2plus",
+  "why": "N5 only: POKE $0288,$CC and POKE $DD00,$94 point the screen editor and the VIC at the MEM screen $CC00, which is BASIC workspace in U2+"
+ },
+ "DRAW.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "INSERT.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "CENTER.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "DIGITS.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "BLINK.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "CURTAIN.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "COLORCOMBI.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "FADE.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "DESIGN3.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "OBLIQUE.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "CHECK-DETECT.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "DO-TEST.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "SHOW DRIVES.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "SHOWIMAGESINREU": {
+  "neo_only": false,
+  "set": "ultra",
+  "why": "MEMDEF ...,$C000 = colour data: rule 'remap', Ultra's MEMLOAD must redirect it (no warning)"
+ },
+ "SOUND1.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "MUSIC1-WTEXT.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "MUSIC2-3VOIC.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "MUSIC3TRIPLT.DMO": {
+  "neo_only": false,
+  "set": "ultra"
+ },
+ "TACO.TSB": {
+  "neo_only": false,
+  "set": "ultra"
+ }
+}
