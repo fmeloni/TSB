@@ -381,6 +381,7 @@
   {
    "bas": "tests/commands/tsb_session.bas",
    "disk": "scratch",
+   "known": [{"kernal": "jiffy", "why": "TSB Neo MERGE without a device number loads absolute under the JiffyDOS KERNAL (SA $6F) and overwrites the program; reports/2.0-machine-matrix.md"}],
    "steps": [
     {
      "end": 1,

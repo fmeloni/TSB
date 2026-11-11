@@ -9,13 +9,25 @@ Library use:
         snap = v.snapshot()      # dict: ram (64K), io ($D000-$DFFF), png (bytes)
 
 CLI (what tools/run_crt.sh uses):
-    vicemon.py run <crt|-> <dump.bin> <irqs> [--d64 X] [--type TEXT] [--png X] [-- extra x64sc args]
+    vicemon.py run <crt|-> <dump.bin> <irqs> [--d64 X] [--type TEXT] [--png X]
+                   [--video pal|ntsc] [--kernal stock|jiffy] [--dos stock|jiffy] [-- extra x64sc args]
     Writes a 2-byte-load-address + $0000-$07FF dump (same format as the old monitor 'save').
 
 Env: X64SC, VICE_DATA (see run_crt.sh).
+Machine (defaults = the configuration all goldens were captured on: PAL, stock KERNAL, stock 1541 ROM):
+    C64_VIDEO  pal | ntsc        VICE -model c64 / -model ntsc (VIC-II, CIA and clock of that machine)
+    C64_KERNAL stock | jiffy     jiffy: -kernal corpus/roms/JiffyDOS_C64/JiffyDOS_C64_6.01.bin
+    C64_DOS    stock | jiffy     jiffy: -dos1541 corpus/roms/JiffyDOS_1541/JiffyDOS_1541-II_6.00.bin
+                                 (drive type stays 1541 with true-drive emulation; the 16K image replaces
+                                 the 1541 DOS ROM, as on a Pi1541 or a short-board 1541)
+    JIFFY_KERNAL, JIFFY_DOS      other paths for the two JiffyDOS images (commercial; never committed)
+    The CLI flags --video/--kernal/--dos of vicemon.py and demo_capture.py set these variables.
 """
 import os, socket, struct, subprocess, sys, time, zlib, shutil
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+JIFFY = {"kernal": os.path.join(ROOT, "corpus/roms/JiffyDOS_C64/JiffyDOS_C64_6.01.bin"),
+         "dos": os.path.join(ROOT, "corpus/roms/JiffyDOS_1541/JiffyDOS_1541-II_6.00.bin")}
 MACVICE = os.path.expanduser("~/Applications/VICE-3.10-SDL2-BluetoothFix")
 
 
@@ -26,6 +38,35 @@ def find_vice():
         cand = os.path.join(os.path.dirname(x), "../share/vice")
         d = os.path.realpath(cand) if os.path.isdir(os.path.join(cand, "C64")) else os.path.expanduser("~/vicedata")
     return x, d
+
+
+def machine():
+    """(video, kernal, dos) from C64_VIDEO / C64_KERNAL / C64_DOS, checked."""
+    m = (os.environ.get("C64_VIDEO", "pal").lower(), os.environ.get("C64_KERNAL", "stock").lower(),
+         os.environ.get("C64_DOS", "stock").lower())
+    if m[0] not in ("pal", "ntsc") or m[1] not in ("stock", "jiffy") or m[2] not in ("stock", "jiffy"):
+        raise SystemExit(f"bad machine {m}: C64_VIDEO pal|ntsc, C64_KERNAL stock|jiffy, C64_DOS stock|jiffy")
+    return m
+
+
+def machine_name():
+    return "-".join(machine())
+
+
+def jiffy_rom(kind):
+    p = os.environ.get("JIFFY_KERNAL" if kind == "kernal" else "JIFFY_DOS") or JIFFY[kind]
+    if not os.path.isfile(p): raise FileNotFoundError(f"JiffyDOS {kind} ROM not found: {p}")
+    return os.path.abspath(p)
+
+
+def machine_args():
+    """x64sc arguments for the selected machine. Placed after -default; -model first, so its
+    defaults (KERNAL revision, VIC-II) do not override the ROM choices that follow."""
+    video, kernal, dos = machine()
+    args = ["-model", "c64" if video == "pal" else "ntsc"]
+    if kernal == "jiffy": args += ["-kernal", jiffy_rom("kernal")]
+    if dos == "jiffy": args += ["-dos1541", jiffy_rom("dos")]
+    return args
 
 
 def blank_d64(path, name="scratch", ident="01"):
@@ -60,6 +101,7 @@ class Vice:
         self.port = free_port()
         args = [x, "-default", "-directory", data, "-silent", "-sounddev", "dummy",
                 "-binarymonitor", "-binarymonitoraddress", f"ip4://127.0.0.1:{self.port}"]
+        args += machine_args()
         if warp: args.append("-warp")
         if crt and crt != "-": args += ["-cartcrt", crt]
         if d64:
@@ -276,6 +318,7 @@ def main(argv):
         if k == "--d64": d64 = rest.pop(0)
         elif k == "--type": typ = rest.pop(0)
         elif k == "--png": png = rest.pop(0)
+        elif k in ("--video", "--kernal", "--dos"): os.environ["C64_" + k[2:].upper()] = rest.pop(0)
         else: raise SystemExit("unknown option " + k)
     with Vice(crt=crt, d64=d64, extra=extra, log=out + ".log") as v:
         if typ:

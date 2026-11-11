@@ -56,6 +56,16 @@ is used; the Classic Simons slot is dropped.
    produce Neo's exact bytes for every line Neo tokenizes correctly (all 1966 corpus lines and all command
    scenarios); the fixed cases are marked as intended differences.
 
+## Test machines (Fafa, 11 Nov)
+- Fafa's drives: real 1541, Pi1541, SD2IEC. VICE true-drive 1541 emulation stands in for the first two. The SD2IEC
+  cannot be emulated: real hardware only (task 2.5). Never use VICE's virtual/filesystem drive as a stand-in.
+- Matrix: PAL/NTSC x KERNAL (stock | JiffyDOS 6.01) x 1541 DOS ROM (stock | JiffyDOS) = 8 machines, `tests/matrix.sh`.
+  Every change: full demo + command suites on pal-stock-stock and ntsc-stock-stock, disk-heavy subset on all 8
+  (`tests/matrix.sh change`). Before each gate: full suites on all 8 (`tests/matrix.sh gate`). Step 2.0 includes the
+  Neo baseline on all 8 for the released CRT and the v0.1 EasyFlash CRT (reports/2.0-machine-matrix.md).
+- JiffyDOS ROMs are commercial: corpus/roms/ is git-ignored, never commit them.
+- Neo switches off the JiffyDOS function keys at boot (`stx $9b`, TSBneo/tsbneo.a line 336). Ultra must do the same.
+
 Ultra also publishes a compatibility address map (jiffy counter, hooks, entry points, settings) so
 Neo-only programs can be ported by changing addresses.
 Open decisions: D3 public vs personal release (interpreter base, licensing), D4 acceptable Ultra
@@ -98,6 +108,10 @@ the cartridge ships as TSB Neo + GO 64 only.
 - Tokenizer collision class (decision 6): 18 keywords whose number byte is a letter, 68 combinations,
   reports/1.5-tokenizer-collisions.md. Ultra rule: tools/tsblist.crunch(ultra=True); 12,905 lines typed into Neo are in
   tests/tokenizer/neo_typed.tsv. DO's number byte is `"`: the rest of a DO line is plain text by design (DONE, DO NULL).
+- JiffyDOS (VICE): the KERNAL banner reads `JIFFYDOS V6.01 (C)1989 CMD` / `C-64 BASIC V2`; the 1541 ROM answers
+  `73,JIFFYDOS 5.0 1541`. JiffyDOS LOAD runs with IRQs off (20K in < 1 s). TSB Neo `MERGE "x"` without a device number
+  fails under the JiffyDOS KERNAL (its default-device routine leaves SA $6F, so the LOAD is absolute and overwrites the
+  program); `MERGE "x",8` works. reports/2.0-machine-matrix.md.
 - A LOAD inside a program restarts it from the first line with variables kept, also TSB's LOAD name,dev,0,addr
   (hence the corpus idiom IF A=0 THEN A=1:LOAD ...). SECURE (ON/OFF/0) hangs TSB Neo.
 
@@ -117,6 +131,10 @@ the cartridge ships as TSB Neo + GO 64 only.
   tests/crunch_corpus.py.
 - EasyFlash CRT: `make build` makes build/TSBUltra.crt; `make test` runs tests/ef_tsbultra.py. Baselines on it:
   tests/demos_tsbneo.sh build/TSBUltra.crt, tests/commands_tsbneo.sh build/TSBUltra.crt.
+- Machines: `--video pal|ntsc --kernal stock|jiffy --dos stock|jiffy` on tools/demo_capture.py and tools/vicemon.py
+  (or env C64_VIDEO/C64_KERNAL/C64_DOS). VICE 3.10 options used: `-model c64|ntsc`, `-kernal <file>`, `-dos1541 <file>`.
+  Goldens are pal-stock-stock only; JiffyDOS identity text (banner, drive ID) is mapped back before comparing;
+  accepted machine-specific differences are a scenario's `known` list (status KNOWN). `tests/matrix.sh change|gate|disk`.
 - ACME is needed for `make build` (`brew install acme`, or tools/setup-linux.sh on Linux).
 
 ## Rules

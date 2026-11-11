@@ -7,6 +7,8 @@
 
 Options: --crt FILE (default build/TSBneo.crt), --d64 FILE (default corpus/tsbneo_260228.d64),
          --scenarios FILE (default tests/demos.json), --golden DIR (default tests/golden), -j N (parallel VICEs)
+         --video pal|ntsc, --kernal stock|jiffy, --dos stock|jiffy: the machine (default pal/stock/stock, the
+         configuration of all goldens; same as the env variables C64_VIDEO/C64_KERNAL/C64_DOS, see vicemon.py)
 
 Scenario (tests/demos.json, list "programs"):
     name      directory name of the program to LOAD+RUN       id      golden folder (default: slug of name)
@@ -40,10 +42,48 @@ only), vic.bin (mode/colour registers), sprites.bin (positions, pointers, data, 
 import hashlib, json, os, re, shutil, struct, sys, tempfile, concurrent.futures as cf
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vicemon, tsblist
+JIFFY_KERNAL = False   # set in main() from the machine (C64_KERNAL / --kernal)
 
 ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 PARTS = ["screen", "color", "bitmap", "charset", "vic", "sprites"]
 DEFAULT_REJECT = [r"\?[a-z0-9 ]+error"]
+
+# Machine identity text that differs between configurations but is not program behaviour. All goldens are
+# captured on PAL with the stock KERNAL and 1541 ROM; on other machines these screen-code strings are mapped
+# back to the stock text before comparing. The JiffyDOS KERNAL banner stays on screen when a program
+# does not clear it, and the JiffyDOS 1541 ROM answers "73,JIFFYDOS 5.0 1541" after a reset.
+def _sc(t):
+    return bytes(ord(c) - 96 if "a" <= c <= "z" else ord(c) for c in t)
+MACHINE_TEXT = {
+    "kernal": [(_sc("       jiffydos v6.01 (c)1989 cmd".ljust(40)), _sc("    **** commodore 64 basic v2 ****".ljust(40)), 40),
+               (_sc(" c-64 basic v2   "), _sc(" 64k ram system  "), 0)],
+    "dos": [(_sc("jiffydos 5.0 1541"), _sc("cbm dos v2.6 1541"), 0)],
+}
+
+
+def machine_screen(screen):
+    """Screen bytes with the current machine's identity text replaced by the stock text (see MACHINE_TEXT).
+    The match ignores the reverse bit; an entry with align 40 only matches a whole screen row."""
+    video, kernal, dos = vicemon.machine()
+    subs = (MACHINE_TEXT["kernal"] if kernal == "jiffy" else []) + (MACHINE_TEXT["dos"] if dos == "jiffy" else [])
+    if not subs: return screen
+    out, plain = bytearray(screen), bytes(b & 0x7F for b in screen)
+    for old, new, align in subs:
+        i = plain.find(old)
+        while i >= 0:
+            if not align or i % align == 0:
+                out[i:i + len(new)] = bytes((o & 0x80) | n for o, n in zip(out[i:i + len(new)], new))
+            i = plain.find(old, i + 1)
+    return bytes(out)
+
+
+def known_issue(sc):
+    """The reason text if this scenario has a known, accepted difference on the current machine
+    (scenario field "known": [{"kernal": "jiffy", "why": "..."}, ...]; keys video/kernal/dos)."""
+    m = dict(zip(("video", "kernal", "dos"), vicemon.machine()))
+    for k in sc.get("known", []):
+        if all(m[x] == k[x] for x in ("video", "kernal", "dos") if x in k): return k["why"]
+    return None
 KEYS = {"del": 0, "return": 1, "crsrright": 2, "f7": 3, "f1": 4, "f3": 5, "f5": 6, "crsrdown": 7,
         "space": 60, "stop": 63, "q": 62, "1": 56, "2": 59, "ctrl": 58, "c=": 61, "lshift": 15}
 for _i, _row in enumerate(["3wa4zse", "5rd6cft", "7yg8bhu", "9ij0mko", "+pl-.:@", "", "", ""]):
@@ -188,8 +228,11 @@ def grab(v, mask=()):
 
 
 def busy(v):
-    """True if the last IRQ interrupted the KERNAL serial-bus code ($ED00-$EEFF): a disk transfer is running."""
-    return 0xED00 <= v.irq_return_pc() <= 0xEEFF
+    """True if the last IRQ interrupted the KERNAL serial-bus code ($ED00-$EEFF): a disk transfer is running.
+    With the JiffyDOS KERNAL also its own serial code, which replaces the tape routines at $F72C-$FCCF.
+    (JiffyDOS LOAD itself runs with IRQs off, so no IRQ lands inside it.)"""
+    pc = v.irq_return_pc()
+    return 0xED00 <= pc <= 0xEEFF or (JIFFY_KERNAL and 0xF72C <= pc <= 0xFCCF)
 
 
 def direct_mode(v, st):
@@ -397,6 +440,7 @@ def compare(sc, res, gdir):
             r = os.path.join(gdir, got[i], "charset.rom.txt")
             if k == "charset" and os.path.exists(r):   # ROM-derived charset: compare by hash
                 want = open(r).read().split("\n")[1].split()[1]; got_ = hashlib.sha1(got_).hexdigest()
+            if k == "screen": got_ = machine_screen(got_)
             if k == "screen" and "rvs" in sc.get("ignore", []):
                 want, got_ = bytes(b & 0x7F for b in want), bytes(b & 0x7F for b in got_)
             if want != got_:
@@ -417,13 +461,18 @@ def compare(sc, res, gdir):
 def main(a):
     opts = {"--crt": os.path.join(ROOT, "build/TSBneo.crt"), "--d64": os.path.join(ROOT, "corpus/tsbneo_260228.d64"),
             "--scenarios": os.path.join(ROOT, "tests/demos.json"), "--golden": os.path.join(ROOT, "tests/golden"), "-j": "4"}
-    args = []
+    args, explicit = [], set()
     while a:
         x = a.pop(0)
-        if x in opts: opts[x] = a.pop(0)
+        if x in opts: opts[x] = a.pop(0); explicit.add(x)
+        elif x in ("--video", "--kernal", "--dos"): os.environ["C64_" + x[2:].upper()] = a.pop(0)
         else: args.append(x)
+    global JIFFY_KERNAL
+    JIFFY_KERNAL = vicemon.machine()[1] == "jiffy"
     if not args: print(__doc__); return 2
     mode, names = args[0], args[1:]
+    if mode == "capture" and vicemon.machine_name() != "pal-stock-stock" and "--golden" not in explicit:
+        print("capture on a non-default machine needs an explicit --golden DIR (goldens are pal-stock-stock)"); return 2
     crt, d64 = opts["--crt"], opts["--d64"]
     if mode == "explore":
         maxf = int(names[1]) if len(names) > 1 else 3000
@@ -445,17 +494,20 @@ def main(a):
                 return sc, ("WARN " + "; ".join(probs)) if probs else "captured", r
             r = run_scenario(sc, crt, d64)
             bad = compare(sc, r, g)
-            return sc, ("FAIL " + "; ".join(bad)) if bad else "PASS", r
         except Exception as e:
-            return sc, f"ERROR {type(e).__name__}: {e}", {}
+            r, bad = {}, [f"ERROR {type(e).__name__}: {e}"]
+        if bad and known_issue(sc): return sc, f"KNOWN {known_issue(sc)} ({'; '.join(bad)})", r
+        if bad and bad[0].startswith("ERROR "): return sc, bad[0], r
+        return sc, ("FAIL " + "; ".join(bad)) if bad else "PASS", r
 
     fails = 0
+    print(f"machine: {vicemon.machine_name()}", flush=True)
     with cf.ThreadPoolExecutor(int(opts["-j"])) as ex:
         for sc, status, r in ex.map(one, todo):
             word = status.split()[0]
             print(f"{word:8} {sc['id']:24} {status[len(word):].strip()}  [{r.get('frames', '?')} frames, "
                   f"{len(r.get('checkpoints', []))} checkpoints]", flush=True)
-            fails += word not in ("PASS", "captured")
+            fails += word not in ("PASS", "captured", "KNOWN")
     return 1 if fails else 0
 
 
