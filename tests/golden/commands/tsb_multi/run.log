@@ -1,0 +1,5 @@
+stable 60: ok after 100 frames
+  -> checkpoint 01_picture
+type ' '
+end: ok after 70 frames
+total 170 frames

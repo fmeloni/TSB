@@ -1,0 +1,6 @@
+frames 60
+type 'cab\r'
+frames 60
+type ' '
+end: ok after 210 frames
+total 330 frames

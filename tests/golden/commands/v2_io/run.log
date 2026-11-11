@@ -1,0 +1,8 @@
+frames 60
+type 'fafa\r'
+frames 30
+type '3,4\r'
+frames 30
+type 'k'
+end: ok after 120 frames
+total 240 frames

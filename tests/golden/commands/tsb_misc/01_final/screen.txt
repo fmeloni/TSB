@@ -1,0 +1,26 @@
+; screen $0400  text ECM  charset ROM lower  border 11 bg 6  sprites $00
+ 0|tsb misc
+ 1|key?
+ 2|keyget z
+ 3|73,cbm dos v2.6 1541,00,00
+ 4|x! error 42 not yet active error
+ 5|
+ 6|delay ok
+ 7|graphics 53248
+ 8|local 1  9
+ 9|global 1  2
+10|ecm text
+11|ecm rvs
+12|end ok
+13|
+14|ready.
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|

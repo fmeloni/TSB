@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|auto 50,5
+ 1|
+ 2|ready.
+ 3|50 rem auto one
+ 4|55 rem auto two
+ 5|60
+ 6|list
+ 7|
+ 8|5 print "merged into"
+ 9|10 print "part one"
+10|20 stop
+11|30 print "continued"
+12|40 end
+13|50 rem auto one
+14|55 rem auto two
+15|ready.
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|

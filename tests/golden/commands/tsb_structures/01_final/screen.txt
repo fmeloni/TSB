@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|tsb structures
+ 1|repeat 4
+ 2|loop 7
+ 3|then
+ 4|else
+ 5|do block
+ 6|in sub1
+ 7|after exec
+ 8|cgoto ok
+ 9|reset 9
+10|rcomp again
+11|two
+12|call ok
+13|
+14|ready.
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|

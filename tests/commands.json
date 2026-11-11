@@ -1,0 +1,562 @@
+{
+ "_comment": "Command suite (plan task 1.2): scenarios as in tests/demos.json, but 'bas' names a text program in tests/commands/ that is tokenized (tools/tsblist.crunch) and RUN directly. Goldens: tests/golden/commands/. 'disk': 'scratch' attaches a fresh writable D64. Compared by default: screen color bitmap charset vic sprites vars sidregs.",
+ "programs": [
+  {
+   "bas": "tests/commands/v2_math.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/v2_flow.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/v2_io.bas",
+   "disk": "scratch",
+   "steps": [
+    {
+     "frames": 60
+    },
+    {
+     "type": "fafa\r"
+    },
+    {
+     "frames": 30
+    },
+    {
+     "type": "3,4\r"
+    },
+    {
+     "frames": 30
+    },
+    {
+     "type": "k"
+    },
+    {
+     "end": 1,
+     "max": 6000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_functions.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_structures.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_errors.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_screen.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_hires.bas",
+   "steps": [
+    {
+     "stable": 60,
+     "max": 3000,
+     "cap": "picture"
+    },
+    {
+     "type": " "
+    },
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_multi.bas",
+   "steps": [
+    {
+     "stable": 60,
+     "max": 3000,
+     "cap": "picture"
+    },
+    {
+     "type": " "
+    },
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_sprites.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_sound.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_mem.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_input.bas",
+   "steps": [
+    {
+     "frames": 60
+    },
+    {
+     "type": "cab\r"
+    },
+    {
+     "frames": 60
+    },
+    {
+     "type": " "
+    },
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_onkey.bas",
+   "steps": [
+    {
+     "frames": 30
+    },
+    {
+     "type": "b"
+    },
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_disk.bas",
+   "disk": "scratch",
+   "steps": [
+    {
+     "end": 1,
+     "max": 6000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_reu.bas",
+   "reu": 512,
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_misc.bas",
+   "steps": [
+    {
+     "frames": 60
+    },
+    {
+     "type": "z"
+    },
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_editor.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    },
+    {
+     "type": "\u0093list\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "list"
+    },
+    {
+     "type": "\u0093find\"two\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "find"
+    },
+    {
+     "type": "\u0093dump\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "dump"
+    },
+    {
+     "type": "\u0093place 0\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "place"
+    },
+    {
+     "type": "\u0093renumber\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "list\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "renumber"
+    },
+    {
+     "type": "\u0093option 10\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "list\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "option"
+    },
+    {
+     "type": "\u0093option 0\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "\u0093trace on\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "run\r"
+    },
+    {
+     "end": 1,
+     "max": 900,
+     "cap": "trace"
+    },
+    {
+     "type": "\u0093trace off\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "\u0093new\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "old\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "list\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "old"
+    },
+    {
+     "type": "\u0093key 1,\"print 7\"+chr$(13)\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "hold": "f1",
+     "frames": 3
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "key"
+    },
+    {
+     "type": "\u0093100 ifathenprint1:elseopen3,3\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "list 100\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "elseopen"
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_printer.bas",
+   "printer": "no-dots",
+   "steps": [
+    {
+     "end": 1,
+     "max": 6000
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_session.bas",
+   "disk": "scratch",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000,
+     "cap": "stop"
+    },
+    {
+     "type": "cont\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "cont"
+    },
+    {
+     "type": "\u0093save \"part\",8\r"
+    },
+    {
+     "end": 1,
+     "max": 3000
+    },
+    {
+     "type": "\u0093new\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "5 print \"merged into\"\r"
+    },
+    {
+     "type": "merge \"part\"\r"
+    },
+    {
+     "end": 1,
+     "max": 3000
+    },
+    {
+     "type": "list\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "merge"
+    },
+    {
+     "type": "\u0093auto 50,5\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "rem auto one\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "rem auto two\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "list\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "auto"
+    },
+    {
+     "type": "\u0093retrace\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "retrace"
+    },
+    {
+     "type": "\u0093page 5\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "list\r"
+    },
+    {
+     "stable": 60,
+     "max": 600,
+     "cap": "page"
+    },
+    {
+     "type": "\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "\u0093page 0\r"
+    },
+    {
+     "end": 1,
+     "max": 600
+    },
+    {
+     "type": "\u0093cold\r"
+    },
+    {
+     "end": 1,
+     "max": 1200,
+     "cap": "cold"
+    }
+   ]
+  },
+  {
+   "bas": "tests/commands/tsb_overlays.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    },
+    {
+     "type": "\u0093inst\r"
+    },
+    {
+     "end": 1,
+     "max": 3000,
+     "cap": "inst"
+    },
+    {
+     "type": "@\r"
+    },
+    {
+     "end": 1,
+     "max": 3000,
+     "cap": "wedge_status"
+    },
+    {
+     "type": "\u0093nrm\r"
+    },
+    {
+     "end": 1,
+     "max": 3000,
+     "cap": "nrm"
+    },
+    {
+     "type": "renumber\r"
+    },
+    {
+     "end": 1,
+     "max": 3000
+    },
+    {
+     "type": "list\r"
+    },
+    {
+     "end": 1,
+     "max": 600,
+     "cap": "renumber_after_nrm"
+    }
+   ]
+  }
+ ]
+}

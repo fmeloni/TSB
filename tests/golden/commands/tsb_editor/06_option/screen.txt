@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|option 10
+ 1|
+ 2|ready.
+ 3|list
+ 4|
+ 5|100 rem tsb editor
+ 6|110 a=1:b$="two":dim c(2):c(1)=5
+ 7|120 print "x";a;b$
+ 8|130 goto150
+ 9|140 print "skipped"
+10|150 end
+11|ready.
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|

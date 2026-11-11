@@ -1,0 +1,42 @@
+end: ok after 70 frames
+  -> checkpoint 01_stop
+type 'cont\r'
+end: ok after 70 frames
+  -> checkpoint 02_cont
+type '\x93save "part",8\r'
+end: ok after 80 frames
+type '\x93new\r'
+end: ok after 70 frames
+type '5 print "merged into"\r'
+type 'merge "part"\r'
+end: ok after 90 frames
+type 'list\r'
+end: ok after 80 frames
+  -> checkpoint 03_merge
+type '\x93auto 50,5\r'
+end: ok after 70 frames
+type 'rem auto one\r'
+end: ok after 70 frames
+type 'rem auto two\r'
+end: ok after 70 frames
+type '\r'
+end: ok after 70 frames
+type 'list\r'
+end: ok after 80 frames
+  -> checkpoint 04_auto
+type '\x93retrace\r'
+end: ok after 70 frames
+  -> checkpoint 05_retrace
+type '\x93page 5\r'
+end: ok after 70 frames
+type 'list\r'
+stable 60: ok after 70 frames
+  -> checkpoint 06_page
+type '\r'
+end: ok after 70 frames
+type '\x93page 0\r'
+end: ok after 70 frames
+type '\x93cold\r'
+end: ok after 80 frames
+  -> checkpoint 07_cold
+total 1250 frames

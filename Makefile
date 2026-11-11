@@ -3,7 +3,7 @@
 ACME ?= acme
 BUILD := build
 
-.PHONY: all build test test-demos clean
+.PHONY: all build test test-demos test-commands clean
 all: build
 
 build: $(BUILD)/tsbneo_disk.prg $(BUILD)/tsbneo_cart.bin
@@ -22,10 +22,17 @@ $(BUILD)/tsbneo_cart.bin: TSBneo/tsbneo.a TSBneo/memhook.inc TSBneo/MD_memhook.i
 TSB_CRT ?= $(BUILD)/TSBneo.crt
 test: build
 	tests/boot_tsbneo.sh $(TSB_CRT)
+	tests/detector.sh
+	python3 tests/crunch_corpus.py
+	python3 tests/no_rom_in_goldens.py
 
 # Demo baseline (task 1.3): all corpus programs against tests/golden/, several minutes.
 test-demos: build
 	tests/demos_tsbneo.sh $(TSB_CRT)
+
+# Command suite (task 1.2): every TSB Neo keyword + BASIC V2 against tests/golden/commands/, about 1 min.
+test-commands: build
+	tests/commands_tsbneo.sh $(TSB_CRT)
 
 clean:
 	rm -rf $(BUILD)

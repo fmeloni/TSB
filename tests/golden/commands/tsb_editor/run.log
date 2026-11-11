@@ -1,0 +1,50 @@
+end: ok after 70 frames
+type '\x93list\r'
+end: ok after 80 frames
+  -> checkpoint 01_list
+type '\x93find"two\r'
+end: ok after 70 frames
+  -> checkpoint 02_find
+type '\x93dump\r'
+end: ok after 70 frames
+  -> checkpoint 03_dump
+type '\x93place 0\r'
+end: ok after 70 frames
+  -> checkpoint 04_place
+type '\x93renumber\r'
+end: ok after 70 frames
+type 'list\r'
+end: ok after 80 frames
+  -> checkpoint 05_renumber
+type '\x93option 10\r'
+end: ok after 70 frames
+type 'list\r'
+end: ok after 80 frames
+  -> checkpoint 06_option
+type '\x93option 0\r'
+end: ok after 70 frames
+type '\x93trace on\r'
+end: ok after 70 frames
+type 'run\r'
+end: ok after 90 frames
+  -> checkpoint 07_trace
+type '\x93trace off\r'
+end: ok after 70 frames
+type '\x93new\r'
+end: ok after 70 frames
+type 'old\r'
+end: ok after 70 frames
+type 'list\r'
+end: ok after 80 frames
+  -> checkpoint 08_old
+type '\x93key 1,"print 7"+chr$(13)\r'
+end: ok after 80 frames
+hold f1 3 frames
+end: ok after 70 frames
+  -> checkpoint 09_key
+type '\x93100 ifathenprint1:elseopen3,3\r'
+end: ok after 70 frames
+type 'list 100\r'
+end: ok after 70 frames
+  -> checkpoint 10_elseopen
+total 1473 frames

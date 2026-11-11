@@ -1,0 +1,19 @@
+; TSB hi-res graphics: HIRES PLOT LINE BLOCK REC CIRCLE ARC ANGL PAINT DRAW ROT CHAR TEXT TEST DUP HI COL
+10 hires 1,0
+20 plot 10,10,1:plot 11,11,1:plot 12,12,1:plot 11,11,0
+30 line 0,199,319,0,1
+40 block 20,20,40,40,1
+50 rec 60,20,30,20,1
+60 circle 160,100,50,40,1
+70 arc 160,100,0,180,10,30,30,1
+80 angl 160,100,45,40,40,1
+90 rec 200,150,40,30,1:paint 210,160,1
+100 rot 0,2:draw "1111222233334444",250,50,1
+110 char 10,150,1,1,2
+120 text 10,170,"tsb",1,2,8
+130 t1=test(11,11):t2=test(12,12):t3=test(30,30)
+140 dup 0,0,40,40,280,0,1,1
+150 hi col
+160 do null
+170 nrm
+180 end

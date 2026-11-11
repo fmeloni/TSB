@@ -1,0 +1,16 @@
+end: ok after 70 frames
+type '\x93inst\r'
+end: ok after 160 frames
+  -> checkpoint 01_inst
+type '@\r'
+end: ok after 70 frames
+  -> checkpoint 02_wedge_status
+type '\x93nrm\r'
+end: ok after 180 frames
+  -> checkpoint 03_nrm
+type 'renumber\r'
+end: ok after 70 frames
+type 'list\r'
+end: ok after 70 frames
+  -> checkpoint 04_renumber_after_nrm
+total 620 frames
