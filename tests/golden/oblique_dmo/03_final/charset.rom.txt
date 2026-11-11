@@ -1,0 +1,2 @@
+charset = character ROM $0800-$0FFF with 0 byte(s) changed
+sha1 410b520d7938790602dce07bb9ce8ef4412dcff7

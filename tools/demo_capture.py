@@ -15,15 +15,21 @@ Scenario (tests/demos.json, list "programs"):
     compare   parts compared (default all: screen color bitmap charset vic sprites [sid])
     mask      [[row, col_from, col_to], ...] screen/colour cells blanked (timing-dependent text)
     reject    regexes that must not appear in any checkpoint's screen text (default: a BASIC error message)
+    bas       (instead of name) a text program, tokenized like TSB does and RUN directly (command suite)
+    disk      "scratch": attach a fresh writable D64 instead of the corpus disk
+    printer   true: emulate printer 4 (raw) and compare everything it received (printer.bin);
+              "no-dots": graphic dot bytes (>= $80) are only checked to be graphic bytes
     steps     list, run in order after RUN:
       {"stable": F, "max": M, "change": true}  run until the display has changed (unless change=false) and then
-                                stays unchanged for F frames with no disk transfer; fails if not within M frames
+                                stays unchanged for F frames with no disk transfer; fails if not within M frames;
+                                "until": regex also requires screen.txt (header line included) to match
       {"end": 1, "max": M}      same with F=60, and BASIC back in direct mode (program finished)
       {"frames": N}             run N frames (KERNAL IRQs, 1/60 s each)
       {"type": "text"}          feed the keyboard buffer ("\\r" = RETURN, lower case = unshifted)
       {"hold": "space", "frames": N}  hold a key in the matrix for N frames (for PEEK(197) polling)
       {"run": "NAME"}           LOAD+RUN another program in the same session (keeps REU contents)
-      {"sid": N}                record SID registers every frame for N frames (distinct states -> sid.bin)
+      {"sid": N}                record SID registers every frame for N frames (states lasting >= 2 frames, repeats
+                                collapsed -> sid.bin)
     Any step may carry "cap": "label" to capture a checkpoint after it, and "expect": [regex,...] checked
     against that checkpoint's screen text. The state after the last step is always captured as "final".
 
@@ -31,7 +37,7 @@ A checkpoint stores: screen.txt (decoded, for people), screen.bin (1000 bytes of
 color.bin (colour RAM nybbles), bitmap.bin (8000 bytes, bitmap mode only), charset.bin (2K, RAM charsets
 only), vic.bin (mode/colour registers), sprites.bin (positions, pointers, data, if any are on), shot.png.
 """
-import hashlib, json, os, re, sys, tempfile, concurrent.futures as cf
+import hashlib, json, os, re, shutil, struct, sys, tempfile, concurrent.futures as cf
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vicemon, tsblist
 
@@ -85,8 +91,18 @@ class State:
             self.sprites = io[0x00:0x11] + ptrs + b"".join(
                 ram[self.bank + p * 64:self.bank + p * 64 + 63] for i, p in enumerate(ptrs) if en >> i & 1)
 
+        self.vars = b""; self.sidregs = b""
+
+    def extras(self, sidregs=None):
+        """Add the parts used by the command suite: decoded BASIC variables and the last SID register writes."""
+        self.vars = basic_vars(self.ram).encode()
+        if sidregs is not None: self.sidregs = sidregs
+        return self
+
     def parts(self):
-        return {k: getattr(self, k) for k in PARTS}
+        d = {k: getattr(self, k) for k in PARTS}
+        if self.vars or self.sidregs: d.update(vars=self.vars, sidregs=self.sidregs)
+        return d
 
     def digest(self, ignore=()):
         h = hashlib.sha1()
@@ -108,6 +124,53 @@ class State:
                + (("charset ROM " + ("lower" if lower else "upper")) if self.rom_chars else f"charset RAM ${self.char_addr:04X}")
                + f"  border {self.vic[7]} bg {self.vic[8]}  sprites ${self.vic[1]:02X}")
         return hdr + "\n" + "\n".join(f"{i:2}|{l}" for i, l in enumerate(self.lines())) + "\n"
+
+
+def mflpt(b):
+    """5-byte Commodore float -> Python float."""
+    if b[0] == 0: return 0.0
+    m = ((b[1] | 0x80) << 24 | b[2] << 16 | b[3] << 8 | b[4]) / 2.0 ** 32
+    return (-1 if b[1] & 0x80 else 1) * m * 2.0 ** (b[0] - 128)
+
+
+def _fmt_float(b):
+    return f"{mflpt(b):.10g} [{b.hex()}]"
+
+
+def basic_vars(ram):
+    """Decode BASIC's simple variables ($2D..$2F) and arrays ($2F..$31) into stable text: values, not
+    addresses, so a different memory layout (Ultra) gives the same text."""
+    w = lambda a: ram[a] | ram[a + 1] << 8
+    vt, at, se = w(0x2D), w(0x2F), w(0x31); out = []
+
+    def name(b0, b1):
+        n = chr(b0 & 0x7F) + (chr(b1 & 0x7F) if b1 & 0x7F else "")
+        k = (b0 >> 7, b1 >> 7)
+        return ("FN " if k == (1, 0) else "") + n + {(0, 0): "", (1, 1): "%", (0, 1): "$", (1, 0): ""}[k], k
+
+    def val(kind, b):
+        if kind == (1, 1): return str(struct.unpack(">h", bytes(b[:2]))[0])
+        if kind == (0, 1):
+            n, p = b[0], b[1] | b[2] << 8
+            return '"' + "".join(chr(c) if 0x20 <= c < 0x7F and c != 0x22 else "{$%02X}" % c for c in ram[p:p + n]) + '"'
+        return _fmt_float(b)
+
+    a = vt
+    while a + 7 <= at and a < 0xD000:
+        nm, kind = name(ram[a], ram[a + 1]); b = ram[a + 2:a + 7]
+        out.append(f"{nm} = " + ("(fn)" if kind == (1, 0) else val(kind, b))); a += 7
+    a = at
+    while a + 5 <= se and a < 0xD000:
+        nm, kind = name(ram[a], ram[a + 1]); size = w(a + 2); nd = ram[a + 4]
+        dims = [ram[a + 5 + 2 * i] << 8 | ram[a + 6 + 2 * i] for i in range(nd)][::-1]
+        es = {(1, 1): 2, (0, 1): 3}.get(kind, 5); e = a + 5 + 2 * nd
+        n = 1
+        for d in dims: n *= d
+        vals = [val(kind, ram[e + i * es:e + i * es + es]) for i in range(min(n, 400))]
+        out.append(f"{nm}({','.join(str(d - 1) for d in dims)}) = " + ", ".join(vals))
+        if size == 0: break
+        a += size
+    return "\n".join(out) + "\n"
 
 
 def scr_char(c, lower):
@@ -135,7 +198,7 @@ def direct_mode(v, st):
     return bool(v.watch) and any(v.watch.values()) and st.ram[0xC6] == 0
 
 
-def wait_stable(v, frames, maxf, ignore=(), mask=(), step=10, until_end=False, change=False):
+def wait_stable(v, frames, maxf, ignore=(), mask=(), step=10, until_end=False, change=False, until=None):
     """Run until the display digest is unchanged for `frames` frames with no disk transfer (and, with until_end,
     BASIC back in direct mode; with change, only after the digest first differs from the start).
     Returns (ok, frames_used, state)."""
@@ -147,7 +210,8 @@ def wait_stable(v, frames, maxf, ignore=(), mask=(), step=10, until_end=False, c
         v.frames(step); used += step
         st = grab(v, mask); d = st.digest(ignore)
         if d != start: changed = True
-        if not changed or busy(v) or (until_end and not direct_mode(v, st)): d = None
+        if not changed or busy(v) or (until_end and not direct_mode(v, st)) or \
+                (until and not re.search(until, st.text(), re.I)): d = None
         if d is not None and d == last:
             same += step
             if same >= frames: return True, used, st
@@ -180,21 +244,46 @@ def load_and_run(v, raw_name, first=True):
     v.watch = {imain: 0}
 
 
+def inject_and_run(v, path):
+    """Wait for READY., tokenize a text program (tools/tsblist.crunch = TSB's tokenizer), poke it to $0801,
+    set the end-of-program pointer and RUN it."""
+    wait_stable(v, 60, 1200)
+    lines = [l.rstrip("\n") for l in open(path, encoding="utf-8") if l.strip() and not l.lstrip().startswith(";")]
+    prg = tsblist.make_prg(lines)
+    v.poke(0x0801, prg[2:], "ram")
+    end = 0x0801 + len(prg) - 2
+    for z in (0x2D, 0x2F, 0x31): v.poke(z, [end & 255, end >> 8], "ram")
+    v.watch = None
+    v.type("run\r")
+    if not v.run_until(0xA871, 6000): raise RuntimeError("program did not start (RUN not reached)")
+    imain = int.from_bytes(v.mem(0x0302, 0x0303, "cpu"), "little")
+    v.watch = {imain: 0}
+
+
 def run_scenario(sc, crt, d64, outdir=None):
     """Run one scenario. Returns {"checkpoints": [(label, State, png, expect)], "log": [...], ...}."""
     log, cps, err = [], [], None
     extra = ["-reu", "-reusize", str(sc["reu"])] if sc.get("reu") else []
-    names = raw_names(d64)
     ignore, mask = sc.get("ignore", []), [tuple(m) for m in sc.get("mask", [])]
-    sid = None; frames = 0
-    with vicemon.Vice(crt=crt, d64=d64, extra=extra, timeout=sc.get("timeout", 900),
-                      log=os.path.join(tempfile.gettempdir(), f"vice_{sc.get('id', slug(sc['name']))}.log")) as v:
-        load_and_run(v, names[sc["name"]])
+    sid = None; frames = 0; tmp = None; rw = False
+    if sc.get("disk") == "scratch":   # a fresh writable disk per run (SAVE, OPEN, SCRSV, DISK ...)
+        tmp = tempfile.mkdtemp(prefix="tsbcmd_"); d64 = vicemon.blank_d64(os.path.join(tmp, "scratch.d64")); rw = True
+    prn = None
+    if sc.get("printer"):  # device 4, raw driver: every byte sent to the printer lands in a file
+        tmp = tmp or tempfile.mkdtemp(prefix="tsbcmd_"); prn = os.path.join(tmp, "printer.bin")
+        extra = extra + ["-devicebackend4", "1", "-busdevice4", "-pr4drv", "raw", "-pr4output", "text", "-pr4txtdev", "0", "-prtxtdev1", prn]
+    names = raw_names(d64) if "name" in sc else {}
+    bas = sc.get("bas")
+    vx = lambda st: st.extras(v.mem(0xD400, 0xD418, "io")) if bas else st
+    with vicemon.Vice(crt=crt, d64=d64, extra=extra, timeout=sc.get("timeout", 900), d64rw=rw,
+                      log=os.path.join(tempfile.gettempdir(), f"vice_{sc.get('id', slug(sc.get('name', '')))}.log")) as v:
+        if bas: inject_and_run(v, os.path.join(ROOT, bas))
+        else: load_and_run(v, names[sc["name"]])
         for s in sc["steps"]:
             if "stable" in s or "end" in s:
                 f = s.get("stable", 60)
                 ok, used, _ = wait_stable(v, f, s.get("max", 3000), ignore, mask, until_end="end" in s,
-                                          change=s.get("change", "stable" in s))
+                                          change=s.get("change", "stable" in s), until=s.get("until"))
                 frames += used
                 log.append(f"{'end' if 'end' in s else 'stable %d' % f}: {'ok' if ok else 'NOT REACHED'} after {used} frames")
                 if not ok and not err: err = f"step {len(log)}: {log[-1]}"
@@ -209,24 +298,57 @@ def run_scenario(sc, crt, d64, outdir=None):
             elif "run" in s:
                 load_and_run(v, names[s["run"]], first=False); log.append(f"run {s['run']}")
             elif "sid" in s:
-                trace = bytearray(); prev = None
+                # one sample per frame; keep states that last >= 2 frames (a state seen for a single frame is
+                # BASIC caught half-way through setting several registers, which depends on timing), collapse repeats
+                samples = []
                 for _ in range(s["sid"]):
-                    v.frames(1); regs = v.mem(0xD400, 0xD418, "io")
-                    if regs != prev: trace += regs; prev = regs
+                    v.frames(1); samples.append(v.mem(0xD400, 0xD418, "io"))
+                trace = bytearray(); prev = None
+                for i, regs in enumerate(samples):
+                    if regs != prev and (i + 1 < len(samples) and samples[i + 1] == regs):
+                        trace += regs; prev = regs
                 sid = bytes(trace); frames += s["sid"]
                 log.append(f"sid {s['sid']} frames: {len(trace) // 25} distinct states")
             if "cap" in s:
-                cps.append((s["cap"], grab(v, mask), v.display_png(), s.get("expect", [])))
+                cps.append((s["cap"], vx(grab(v, mask)), v.display_png(), s.get("expect", [])))
                 log.append(f"  -> checkpoint {len(cps):02d}_{s['cap']}")
         last = sc["steps"][-1] if sc["steps"] else {}
-        cps.append(("final", grab(v, mask), v.display_png(),
+        cps.append(("final", vx(grab(v, mask)), v.display_png(),
                     sc.get("expect", []) + ([] if "cap" in last else last.get("expect", []))))
-    res = {"checkpoints": cps, "log": log, "frames": frames, "error": err, "sid": sid}
+    printed = open(prn, "rb").read() if prn and os.path.exists(prn) else (b"" if prn else None)
+    if tmp: shutil.rmtree(tmp, ignore_errors=True)
+    res = {"checkpoints": cps, "log": log, "frames": frames, "error": err, "sid": sid, "printer": printed}
     if outdir: write_golden(outdir, sc, res)
     return res
 
 
 def cp_dir(i, label): return f"{i + 1:02d}_{label}"
+
+
+_CHARGEN = None
+
+
+def chargen():
+    """The C64 character ROM from the VICE data folder (never stored in this repo)."""
+    global _CHARGEN
+    if _CHARGEN is None:
+        import glob
+        d = vicemon.find_vice()[1]
+        f = sorted(glob.glob(os.path.join(d, "C64", "chargen*")))
+        _CHARGEN = open(f[0], "rb").read() if f else b""
+    return _CHARGEN
+
+
+def rom_charset_text(cs):
+    """If a RAM charset is (nearly) a copy of one 2K half of the character ROM, return the text that is stored
+    instead of the bytes (CLAUDE.md: no Commodore ROM images in git): ROM half, SHA-1 of the 2048 bytes and the
+    differing bytes. Otherwise None."""
+    rom = chargen()
+    best = max(((sum(a == b for a, b in zip(cs, rom[h:h + 2048])), h) for h in range(0, len(rom), 2048)), default=(0, 0))
+    if not rom or best[0] < 1536: return None
+    h = best[1]; diff = [(i, rom[h + i], c) for i, c in enumerate(cs) if rom[h + i] != c]
+    return (f"charset = character ROM ${h:04X}-${h + 2047:04X} with {len(diff)} byte(s) changed\n"
+            f"sha1 {hashlib.sha1(cs).hexdigest()}\n" + "".join(f"{i:04X} = {c:02X}\n" for i, a, c in diff))
 
 
 def write_golden(d, sc, res):
@@ -238,10 +360,15 @@ def write_golden(d, sc, res):
     for i, (label, st, png, _) in enumerate(res["checkpoints"]):
         c = os.path.join(d, cp_dir(i, label)); os.makedirs(c)
         open(os.path.join(c, "screen.txt"), "w").write(st.text())
+        if st.vars: open(os.path.join(c, "vars.txt"), "wb").write(st.vars)
         for k, val in st.parts().items():
-            if val: open(os.path.join(c, k + ".bin"), "wb").write(val)
+            if not val or k == "vars": continue
+            t = rom_charset_text(val) if k == "charset" else None
+            if t: open(os.path.join(c, "charset.rom.txt"), "w").write(t)
+            else: open(os.path.join(c, k + ".bin"), "wb").write(val)
         open(os.path.join(c, "shot.png"), "wb").write(png)
     if res["sid"]: open(os.path.join(d, "sid.bin"), "wb").write(res["sid"])
+    if res.get("printer") is not None: open(os.path.join(d, "printer.bin"), "wb").write(res["printer"])
     open(os.path.join(d, "run.log"), "w").write("\n".join(res["log"]) + f"\ntotal {res['frames']} frames\n")
 
 
@@ -261,15 +388,26 @@ def compare(sc, res, gdir):
     want = sorted(x for x in os.listdir(gdir) if os.path.isdir(os.path.join(gdir, x))) if os.path.isdir(gdir) else []
     got = [cp_dir(i, c[0]) for i, c in enumerate(res["checkpoints"])]
     if want != got: return bad + [f"checkpoints {got} != golden {want}"]
-    parts = [p for p in sc.get("compare", PARTS) if p not in sc.get("ignore", [])]
+    deflt = PARTS + (["vars", "sidregs"] if sc.get("bas") else [])
+    parts = [p for p in sc.get("compare", deflt) if p not in sc.get("ignore", [])]
     for i, (label, st, _, _) in enumerate(res["checkpoints"]):
         for k in parts:
-            f = os.path.join(gdir, got[i], k + ".bin")
+            f = os.path.join(gdir, got[i], "vars.txt" if k == "vars" else k + ".bin")
             want, got_ = (open(f, "rb").read() if os.path.exists(f) else b""), getattr(st, k)
+            r = os.path.join(gdir, got[i], "charset.rom.txt")
+            if k == "charset" and os.path.exists(r):   # ROM-derived charset: compare by hash
+                want = open(r).read().split("\n")[1].split()[1]; got_ = hashlib.sha1(got_).hexdigest()
             if k == "screen" and "rvs" in sc.get("ignore", []):
                 want, got_ = bytes(b & 0x7F for b in want), bytes(b & 0x7F for b in got_)
             if want != got_:
                 bad.append(f"{got[i]}/{k} differs")
+    f = os.path.join(gdir, "printer.bin")
+    if res.get("printer") is not None:
+        want = open(f, "rb").read() if os.path.exists(f) else None
+        got_ = res["printer"]
+        if sc.get("printer") == "no-dots" and want is not None:   # graphic dot bytes (>= $80) vary run to run
+            want, got_ = bytes(min(b, 0x80) for b in want), bytes(min(b, 0x80) for b in got_)
+        if want != got_: bad.append("printer output differs")
     f = os.path.join(gdir, "sid.bin")
     if "sid" in sc.get("compare", PARTS + ["sid"]) and os.path.exists(f) and open(f, "rb").read() != (res["sid"] or b""):
         bad.append("sid trace differs")
@@ -295,8 +433,8 @@ def main(a):
             print(f"--- after {used} frames, stable={ok}"); print(st.text())
         return 0
     scen = json.load(open(opts["--scenarios"]))["programs"]
-    for s in scen: s.setdefault("id", slug(s["name"]))
-    todo = [s for s in scen if s.get("steps") is not None and (not names or s["id"] in names or s["name"] in names)]
+    for s in scen: s.setdefault("id", slug(s.get("name") or os.path.splitext(os.path.basename(s["bas"]))[0]))
+    todo = [s for s in scen if s.get("steps") is not None and (not names or s["id"] in names or s.get("name") in names)]
 
     def one(sc):
         g = os.path.join(opts["--golden"], sc["id"])

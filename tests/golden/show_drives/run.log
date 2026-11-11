@@ -1,8 +1,8 @@
 stable 120: ok after 130 frames
   -> checkpoint 01_start
 type '\r'
-stable 120: ok after 510 frames
+stable 120: ok after 580 frames
   -> checkpoint 02_drive8
 type ' '
-end: ok after 80 frames
-total 720 frames
+end: ok after 260 frames
+total 970 frames

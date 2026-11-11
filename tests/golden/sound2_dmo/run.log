@@ -1,4 +1,4 @@
-sid 400 frames: 14 distinct states
+sid 400 frames: 8 distinct states
 stable 120: ok after 130 frames
   -> checkpoint 01_again
 type 'n'

@@ -1,0 +1,14 @@
+charset = character ROM $0800-$0FFF with 12 byte(s) changed
+sha1 b06ec6c3316a8453cc1d69fe666f3c9093b6f439
+0201 = FF
+0204 = 00
+0205 = FF
+0207 = FF
+0300 = AA
+0301 = 55
+0302 = AA
+0303 = 55
+0304 = AA
+0305 = 55
+0306 = AA
+0307 = 55

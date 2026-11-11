@@ -1,5 +1,5 @@
-stable 120: ok after 640 frames
+stable 120: ok after 600 frames
   -> checkpoint 01_kirby
 type ' '
-end: ok after 150 frames
-total 790 frames
+end: ok after 180 frames
+total 780 frames

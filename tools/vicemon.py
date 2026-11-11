@@ -28,6 +28,14 @@ def find_vice():
     return x, d
 
 
+def blank_d64(path, name="scratch", ident="01"):
+    """Create an empty formatted D64 with VICE's c1541 (next to x64sc)."""
+    c1541 = os.path.join(os.path.dirname(find_vice()[0]), "c1541")
+    subprocess.run([c1541, "-format", f"{name},{ident}", "d64", path], check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return path
+
+
 def free_port():
     s = socket.socket(); s.bind(("127.0.0.1", 0)); p = s.getsockname()[1]; s.close(); return p
 
@@ -47,7 +55,7 @@ def petscii(text):
 class Vice:
     STX, API = 0x02, 0x02
 
-    def __init__(self, crt=None, d64=None, extra=(), warp=True, truedrive=True, timeout=240, log=None):
+    def __init__(self, crt=None, d64=None, extra=(), warp=True, truedrive=True, timeout=240, log=None, d64rw=False):
         x, data = find_vice()
         self.port = free_port()
         args = [x, "-default", "-directory", data, "-silent", "-sounddev", "dummy",
@@ -55,7 +63,10 @@ class Vice:
         if warp: args.append("-warp")
         if crt and crt != "-": args += ["-cartcrt", crt]
         if d64:
-            args += ["-drive8type", "1541", "-busdevice8", "-attach8ro", "-8", d64]  # never modify the corpus
+            # read-only by default: never modify the corpus; d64rw only for scratch copies.
+            # No -busdevice8: it enables VICE's virtual IEC device, which then answers instead of the
+            # emulated 1541 (status 73 reads "VIRTUAL DRIVE EMULATION" instead of "CBM DOS V2.6 1541").
+            args += ["-drive8type", "1541", "-attach8rw" if d64rw else "-attach8ro", "-8", d64]
             args.append("-drive8truedrive" if truedrive else "+drive8truedrive")
         args += list(extra)
         self.log = open(log or os.devnull, "w")
