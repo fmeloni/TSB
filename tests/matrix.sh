@@ -26,7 +26,8 @@ fails=0; summary=""
 
 run() {  # run <machine> <suite: demos|commands> [ids...]
   local m=$1 suite=$2; shift 2
-  local video=${m%%-*} rest=${m#*-}   # e.g. oldntsc-jiffy-stock; local kernal=${rest%-*} dos=${rest#*-}
+  local video=${m%%-*} rest=${m#*-}   # e.g. oldntsc-jiffy-stock
+  local kernal=${rest%-*} dos=${rest#*-}
   if [[ $m == *jiffy* ]] && { [ ! -f "${JIFFY_KERNAL:-corpus/roms/JiffyDOS_C64/JiffyDOS_C64_6.01.bin}" ] ||
                                [ ! -f "${JIFFY_DOS:-corpus/roms/JiffyDOS_1541/JiffyDOS_1541-II_6.00.bin}" ]; }; then
     summary+=$(printf "\n%-18s %-9s SKIP (JiffyDOS ROMs missing)" "$m" "$suite"); return
