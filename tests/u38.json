@@ -1,0 +1,81 @@
+{
+ "_comment": "Ultra-38 B2.2 subset scenarios (tests/u38/*.bas): goldens in tests/golden/u38/ are captured on TSB Neo (build/TSBneo.crt); the Ultra-38 flash spike (build/u38_spike.crt) must match them byte for byte (tests/u38_spike.py). Each program sets TSB Neo's colours and character set first, so the different start-up screens do not matter. The flash spike has no hot-helper copies yet (B3.1), so LINE is slower than on Neo: the picture step waits 200 stable frames.",
+ "programs": [
+  {
+   "bas": "tests/u38/print_at.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/u38/do_else.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/u38/proc_exec.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/u38/hires_plot.bas",
+   "steps": [
+    {
+     "stable": 200,
+     "max": 6000,
+     "cap": "picture"
+    },
+    {
+     "type": " "
+    },
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/u38/play_irq.bas",
+   "steps": [
+    {
+     "sid": 400,
+     "from": "gate"
+    },
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  },
+  {
+   "bas": "tests/u38/stress.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 30000
+    }
+   ],
+   "timeout": 1500
+  },
+  {
+   "bas": "tests/u38/nmi_once.bas",
+   "steps": [
+    {
+     "end": 1,
+     "max": 3000
+    }
+   ]
+  }
+ ]
+}

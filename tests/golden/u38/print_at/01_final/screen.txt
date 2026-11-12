@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM lower  border 11 bg 12  sprites $00
+ 0|u38 print at
+ 1|
+ 2|      row 2
+ 3|         row 3
+ 4|            row 4
+ 5|               row 5
+ 6|                  row 6
+ 7|                     row 7
+ 8|                        row 8
+ 9|                           row 9
+10|
+11|
+12|     at end
+13|
+14| xy
+15|  xyy
+16|   xyyy
+17|    xyyyy
+18|     xyyyyy
+19|
+20|done
+21|
+22|ready.
+23|
+24|

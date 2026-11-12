@@ -1,0 +1,512 @@
+; -----------------------------------------------------------------------------
+; TSB Ultra-38 - RAM core: entry, exit, ROM-call and interrupt stubs (phase B2)
+;
+; Layout H (reports/B1-ultra38-design.md): TSB code runs from 8K ROMH windows at
+; $a000 with EasyFlash in 16K mode and the CPU port at $36 ("TSB state": RAM
+; $0000-$9fff, ROMH $a000-$bfff, RAM $c000-$cfff, I/O, KERNAL). BASIC runs with the
+; cartridge off and $37 ("BASIC state"). Rules:
+;   - The cartridge is on exactly when CPU port bit 0 is clear. Every switch writes
+;     $01 first and $de02 second, in both directions, so an interrupt between the
+;     two writes saves a port value that restores a consistent state.
+;   - Banks are switched by writing core_bank first and $de00 second.
+;   - A switch of the cartridge or of the bank happens either in RAM (here) or in
+;     the "common" code (macro U38_COMMON), which sits at the same address in every
+;     flash bank, so execution continues in the new bank at the next byte.
+;   - t_a, t_p and jv are scratch for one stub sequence at a time; the IRQ and NMI
+;     paths save and restore them, so their handlers may use stubs.
+;
+; Pieces (all copied to RAM by u38_install):
+;   $df0b-$dffd  EasyFlash RAM, visible whenever I/O is, cartridge on or off.
+;                $df00-$df0a are never touched (REU registers, TSB Neo's probe).
+;   $ff40-$fff9  RAM under the KERNAL, for interrupts taken while a helper has the
+;                KERNAL switched off ($35/$34); CPU vectors $fffa/$fffe in RAM.
+;
+; The including file defines before !source:
+;   EF_ON          value for $de02 in TSB state: $07 (16K) on the cartridge,
+;                  $04 in the B2.1 speed spike (TSB Neo stays in RAM; same cycles)
+;   BANK_CORE      flash bank selected at start (core_bank's initial value)
+;   U38_<entry>_BANK  flash bank of each handler below
+;   U38_IGONE, U38_IEVAL, U38_IERROR, U38_IMAIN, U38_ICRNCH, U38_IQPLOP, U38_BRK,
+;   U38_LOAD, U38_SAVE, U38_IRQ, U38_NMI   handler addresses in BANK_CORE
+; ICRNCH's handler finds the return trampoline ev_ret on the stack (its rts goes
+; back to the BASIC ROM through it). IEVAL's handler pushes it itself on the paths
+; that end with rts (TSB functions): the V2 path must leave the stack as EVAL left
+; it, because EVAL pops its caller's return address for unary minus and NOT.
+;   U38_COMMON_AT  address of the common block (same in every bank)
+; -----------------------------------------------------------------------------
+
+	U38_DF		= $df0b
+	U38_DF_END	= $dffe
+	U38_FF		= $ff40
+	CPU_PORT	= $01
+	EF_BANK		= $de00
+	EF_CTRL		= $de02
+	EF_OFF		= $04
+	ST_TSB		= $36		; CPU port in TSB state
+	ST_BASIC	= $37		; CPU port in BASIC state
+	ST_KOFF		= $35		; KERNAL-off helpers (RAM at $a000 and $e000, I/O on)
+	FAKE_P		= $24		; status pushed for a fake interrupt frame: I set, B clear
+
+; -----------------------------------------------------------------------------
+; u38_install: copy the RAM pieces, set the RAM CPU vectors. Interrupts off.
+; -----------------------------------------------------------------------------
+!macro U38_INSTALL {
+	ldx #u38_df_end - u38_df_image - 1
+-	lda u38_df_image,x
+	sta U38_DF,x
+	dex
+	cpx #$ff
+	bne -
+	ldx #u38_ff_end - u38_ff_image - 1
+-	lda u38_ff_image,x
+	sta U38_FF,x		; goes to the RAM under the KERNAL
+	dex
+	cpx #$ff
+	bne -
+}
+
+; -----------------------------------------------------------------------------
+; Thunks: flash code, one per target and calling bank. .b = this bank.
+; -----------------------------------------------------------------------------
+; JSR into the BASIC ROM (or other code that needs BASIC state). A passes, N/Z
+; from A, C and V pass; A, X, Y and all flags come back.
+; (.b = -1: the current bank, for callers in RAM)
+!macro RC .t, .b {
+	sta t_a
+!if .b < 0 { lda core_bank } else { lda #.b }
+	pha
+	lda #<.t
+	sta jv+1
+	lda #>.t
+	sta jv+2
+	jmp rc_stub
+}
+; JMP into the BASIC ROM: A, X, Y and all flags pass.
+!macro RX .t {
+	php
+	sta t_a
+	lda #<.t
+	sta jv+1
+	lda #>.t
+	sta jv+2
+	jmp rx_stub
+}
+; JMP to a BASIC ROM routine that returns (rts): a call plus rts, so the routine
+; returns in TSB state to whoever called the TSB code (TSB code, or ev_ret).
+!macro RT .rc {
+	jsr .rc
+	rts
+}
+; JSR to a BASIC routine that resets the stack (CLR: keeps one return address,
+; SP = $fa). The caller's return address and the bank go where c_rc pops them
+; after CLR: bank $01fb, return $01fc/$01fd. Also for a JMP (tail call).
+!macro RCS .t, .b {
+	sta t_a
+	pla
+	sta $01fc
+	pla
+	sta $01fd
+!if .b < 0 { lda core_bank } else { lda #.b }
+	sta $01fb
+	lda #<.t
+	sta jv+1
+	lda #>.t
+	sta jv+2
+	jmp rc_stub
+}
+; EV_PUSH: insert the ev_ret frame under the caller's return address; then jmp
+; .t (a JSR to EV_PUSH acts as a JSR to .t). Keeps A, X, Y, C, V; N/Z from A.
+!macro EV_PUSH .t {
+	sta t_a
+	pla
+	sta jv+1
+	pla
+	sta jv+2
+	lda #>(ev_ret - 1)
+	pha
+	lda #<(ev_ret - 1)
+	pha
+	lda jv+2
+	pha
+	lda jv+1
+	pha
+	lda t_a
+	jmp .t
+}
+; EV_JMP: push the ev_ret frame and jmp .t
+!macro EV_JMP .t {
+	sta t_a
+	lda #>(ev_ret - 1)
+	pha
+	lda #<(ev_ret - 1)
+	pha
+	lda t_a
+	jmp .t
+}
+; JSR to .t in bank .tb from bank .b: as RC.
+!macro FC .t, .tb, .b {
+	sta t_a
+!if .b < 0 { lda core_bank } else { lda #.b }
+	pha
+	lda #<.t
+	sta jv+1
+	lda #>.t
+	sta jv+2
+	lda #.tb
+	jmp c_xcall
+}
+; JMP to .t in bank .tb: A, X, Y and all flags pass.
+!macro FJ .t, .tb {
+	php
+	sta t_a
+	lda #<.t
+	sta jv+1
+	lda #>.t
+	sta jv+2
+	lda #.tb
+	jmp c_xjump
+}
+
+; -----------------------------------------------------------------------------
+; Common block: identical in every flash bank, at U38_COMMON_AT. Instance 1
+; defines the global labels; the others must assemble to the same addresses.
+; -----------------------------------------------------------------------------
+!macro U38_COMMON {
+; hot entries land here with the cartridge just switched on (bank: stale)
+e_igone	lda #U38_IGONE_BANK
+	sta core_bank
+	sta EF_BANK
+	pla
+	jmp U38_IGONE
+e_ieval	lda #U38_IEVAL_BANK
+	sta core_bank
+	sta EF_BANK
+	pla
+	jmp U38_IEVAL
+; cold entries: stack A, index
+c_cold	stx t_p
+	pla
+	tax
+	lda c_ctab_bk,x
+	sta core_bank
+	sta EF_BANK
+	lda c_ctab_lo,x
+	sta jv+1
+	lda c_ctab_hi,x
+	sta jv+2
+	cpx #2			; ICRNCH: its handler returns with rts (tail call into CRUNCH)
+	beq +
+	ldx t_p
+	pla			; N, Z from A
+	jmp jv
++	pla
+	sta t_a
+	lda #>(ev_ret - 1)
+	pha
+	lda #<(ev_ret - 1)
+	pha
+	ldx t_p
+	lda t_a
+	jmp jv
+c_ctab_lo !byte <U38_IERROR, <U38_IMAIN, <U38_ICRNCH, <U38_IQPLOP, <U38_BRK, <U38_LOAD, <U38_SAVE
+c_ctab_hi !byte >U38_IERROR, >U38_IMAIN, >U38_ICRNCH, >U38_IQPLOP, >U38_BRK, >U38_LOAD, >U38_SAVE
+c_ctab_bk !byte U38_IERROR_BANK, U38_IMAIN_BANK, U38_ICRNCH_BANK, U38_IQPLOP_BANK, U38_BRK_BANK, U38_LOAD_BANK, U38_SAVE_BANK
+; back from a ROM call (rc_stub): stack caller's bank, P
+c_rc	pla
+	sta t_p
+	pla
+	sta core_bank
+	sta EF_BANK
+	lda t_p
+	pha
+	lda t_a
+	plp
+	rts
+; far call: A = target bank, stack: caller's bank
+c_xcall	sta core_bank
+	sta EF_BANK
+	lda t_a
+	jsr jv
+	php
+	sta t_a
+	pla
+	sta t_p
+	pla
+	sta core_bank
+	sta EF_BANK
+	lda t_p
+	pha
+	lda t_a
+	plp
+	rts
+; far jump: A = target bank, stack: P
+c_xjump	sta core_bank
+	sta EF_BANK
+	lda t_a
+	plp
+	jmp jv
+; IRQ: stack port, bank
+c_irq	lda #U38_IRQ_BANK
+	sta core_bank
+	sta EF_BANK
+	lda t_a			; the handler may use stubs (far calls): keep the
+	pha			; interrupted sequence's scratch bytes
+	lda t_p
+	pha
+	lda jv+1
+	pha
+	lda jv+2
+	pha
+	jsr U38_IRQ
+	pla
+	sta jv+2
+	pla
+	sta jv+1
+	pla
+	sta t_p
+	pla
+	sta t_a
+	pla
+	sta core_bank
+	sta EF_BANK
+	pla
+	sta CPU_PORT		; $37: ROMH stays visible until $de02 changes
+	lsr
+	lda #EF_ON
+	bcc +
+	lda #EF_OFF
++	jmp u_irqx
+; NMI: stack A, port, bank; the handler (TSB Neo's snmi) ends in the KERNAL's
+; $febc or never returns (RUN/STOP-RESTORE)
+c_nmi	lda #U38_NMI_BANK
+	sta core_bank
+	sta EF_BANK
+	lda t_a
+	pha
+	lda t_p
+	pha
+	lda jv+1
+	pha
+	lda jv+2
+	pha
+	lda #>c_nmiret
+	pha
+	lda #<c_nmiret
+	pha
+	lda #FAKE_P
+	pha
+	jmp U38_NMI
+c_nmiret pla
+	sta jv+2
+	pla
+	sta jv+1
+	pla
+	sta t_p
+	pla
+	sta t_a
+	pla
+	sta core_bank
+	sta EF_BANK
+	pla
+	sta CPU_PORT
+	lsr
+	lda #EF_ON
+	bcc +
+	lda #EF_OFF
++	jmp u_nmix
+}
+
+; -----------------------------------------------------------------------------
+; Part 1: EasyFlash RAM $df0b-$dffd
+; -----------------------------------------------------------------------------
+!macro U38_DF_IMAGE {
+u38_df_image
+!pseudopc U38_DF {
+core_bank	!byte BANK_CORE	; shadow of $de00 (write-only)
+t_a		!byte 0
+t_p		!byte 0
+jv		jmp $0000	; shared jump vector, written by thunks
+
+; TSB state on (cold paths)
+ton		lda #ST_TSB
+		sta CPU_PORT
+		lda #EF_ON
+		sta EF_CTRL
+		rts
+
+; hot entries from the BASIC vectors (BASIC state); A and N/Z pass, C and V pass
+u_igone		pha
+		lda #ST_TSB
+		sta CPU_PORT
+		lda #EF_ON
+		sta EF_CTRL
+		jmp e_igone
+u_ieval		pha
+		lda #ST_TSB
+		sta CPU_PORT
+		lda #EF_ON
+		sta EF_CTRL
+		jmp e_ieval
+
+; cold entries; A, X, Y and N/Z (from A) pass
+u_ierror	pha
+		lda #0
+		beq u_cold
+u_imain		pha
+		lda #1
+		bne u_cold
+u_icrnch	pha
+		lda #2
+		bne u_cold
+u_iqplop	pha
+		lda #3
+		bne u_cold
+u_brk		pha
+		lda #4
+		bne u_cold
+; LOAD/SAVE vectors: entered from BASIC state only (TSB's own KERNAL LOAD calls go
+; through a ROM-call stub); the handlers leave through an exit stub into the KERNAL
+u_load		pha
+		lda #5
+		bne u_cold
+u_save		pha
+		lda #6
+u_cold		pha
+		jsr ton
+		jmp c_cold
+
+; ROM call, from an RC thunk (stack: caller's bank)
+rc_stub		lda #ST_BASIC
+		sta CPU_PORT
+		lda #EF_OFF
+		sta EF_CTRL
+		lda t_a
+		jsr jv
+		php
+		sta t_a
+		lda #ST_TSB
+		sta CPU_PORT
+		lda #EF_ON
+		sta EF_CTRL
+		jmp c_rc
+
+; exit into the BASIC ROM, from an RX thunk (stack: P)
+rx_stub		lda #ST_BASIC
+		sta CPU_PORT
+		lda #EF_OFF
+		sta EF_CTRL
+		lda t_a
+		plp
+		jmp jv
+
+; IRQ through $0314, from the KERNAL's $ff48 (A, X, Y saved there)
+u_irq		lda CPU_PORT
+		pha
+		lda core_bank
+		pha
+		jsr ton
+		jmp c_irq
+u_irqx		sta EF_CTRL
+		jmp $ea31
+
+; NMI through $0318, from the KERNAL's $fe43
+u_nmi		pha
+		lda CPU_PORT
+		pha
+		lda core_bank
+		pha
+		jsr ton
+		jmp c_nmi
+u_nmix		sta EF_CTRL
+		pla
+		rti
+
+; return trampoline for handlers that end with rts (TSB functions, ICRNCH): BASIC state
+ev_ret		php
+		sta t_a
+		lda #ST_BASIC
+		sta CPU_PORT
+		lda #EF_OFF
+		sta EF_CTRL
+		lda t_a
+		plp
+		rts
+
+; interrupts taken with the KERNAL off (helpers, $35/$34) come here from $ff40+
+df_nmigo	lda #ST_TSB
+		sta CPU_PORT
+		jmp $fe43
+df_ramret	lda #ST_KOFF
+		sta CPU_PORT
+		jmp ram_tail
+
+; KERNAL-off helpers for TSB code (pointer $a8, offset Y): read, and
+; read-modify-write with the operation in k_op (ora/and/eor #imm opcode) and
+; the operand in A. X, Y kept.
+k_rd		lda #ST_KOFF
+		sta CPU_PORT
+		lda ($a8),y
+k_back		pha
+		lda #ST_TSB
+		sta CPU_PORT
+		pla
+		rts
+k_rmw		sta k_op+1	; (k_op itself: opcode, set by the caller)
+		lda #ST_KOFF
+		sta CPU_PORT
+		lda ($a8),y
+k_op		ora #$00
+		sta ($a8),y
+		jmp k_back
+}
+u38_df_end
+!if u38_df_end - u38_df_image > U38_DF_END - U38_DF { !error "core38: EasyFlash RAM part too large: ", u38_df_end - u38_df_image }
+}
+
+; -----------------------------------------------------------------------------
+; Part 2: RAM under the KERNAL, $ff40-$ffff (visible with $35/$34 only)
+; -----------------------------------------------------------------------------
+!macro U38_FF_IMAGE {
+u38_ff_image
+!pseudopc U38_FF {
+		!fill 4, $ea	; $ff40-$ff43 unused
+; enter the KERNAL's IRQ code: switching it in at $ff46/$ff47 makes the next
+; fetch come from the KERNAL ROM at $ff48 (same in the stock and JiffyDOS KERNALs)
+ff_kirq		lda #ST_TSB
+		sta CPU_PORT
+!if * != $ff48 { !error "core38: IRQ fall-through not at $ff48" }
+; IRQ/BRK with the KERNAL off: save A and the port, fake frame to df_ramret
+ram_irq		pha
+		lda CPU_PORT
+		pha
+		lda #>df_ramret
+		pha
+		lda #<df_ramret
+		pha
+		lda #FAKE_P
+		pha
+		jmp ff_kirq
+ram_nmi		pha
+		lda CPU_PORT
+		pha
+		lda #>df_ramret
+		pha
+		lda #<df_ramret
+		pha
+		lda #FAKE_P
+		pha
+		lda #ST_KOFF	; I/O on, so $dfxx is visible
+		sta CPU_PORT
+		jmp df_nmigo
+ram_tail	pla
+		sta CPU_PORT
+		pla
+		rti
+ff_free
+		!fill $fffa - ff_free, $00
+		!word ram_nmi		; $fffa NMI
+		!word $fce2		; $fffc RESET (the EasyFlash boots from ROMH anyway)
+		!word ram_irq		; $fffe IRQ/BRK
+}
+u38_ff_end
+}

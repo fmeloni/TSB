@@ -32,6 +32,14 @@ stop the CPU; $A000-$BFFF ones only count with the BASIC ROM switched out); `ult
 slowdown prediction for the two layouts. `make bench` runs all three on tests/bench/. `neodetect.py --target ultra38`
 applies the Ultra-38 detector rules.
 
+Phase B2 (Ultra-38 spikes, reports/B2-spike.md): `u38gen.py b21|flash <dir>` rewrites TSB Neo's source so every
+crossing goes through the Ultra-38 stubs of `additions/ultra38/core38.a` (`b21`: TSB Neo stays in RAM at its own
+addresses, the B2.1 speed spike; `flash`: six ROMH banks plus the $C000 RAM part, the B2.2 flash spike); `u38crt.py`
+packs the flash spike CRT; `u38bench.py` times programs cycle-exactly (CIA 2 as a 32-bit counter) and counts stub
+events; `u38demotime.py` times corpus demos until their golden appears; `u38compare.py` prints the report tables;
+`u38stubcost.py` measures single stub paths; `trace38.py` / `trace38f.py` single-step a spike and show where it went
+wrong. `make bench38` runs the timings; `make test-u38` and `tests/matrix.sh spike38` the flash spike tests.
+
 C64 ROMs are not in this repo. Set `VICE_DATA` to a folder with `C64/` and `DRIVES/`
 holding the ROM files from a VICE install (for example `share/vice` of VICE 3.10).
 

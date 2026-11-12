@@ -195,6 +195,12 @@ in the prediction.
 
 ## Slowdown prediction
 
+**Erratum (B2, 12 Nov):**
+- The cycle counts in this section assume 19,656 cycles per IRQ (the PAL video frame). The KERNAL's IRQ comes from a
+  CIA timer, every 16,422 cycles on PAL. So every percentage below is too low by a factor of 1.197.
+- The real stubs also cost more than these sketches, and B1 missed several kinds of events.
+- Measured figures: reports/B2-spike.md.
+
 Method: `tools/neoprofile.py` runs each benchmark on TSB Neo with VICE exec checkpoints that count without stopping.
 Checkpoints sit on every entry vector target, the command dispatch, every ROM call site, every CHRGET site, every cross-region
 JSR/JMP and every pointer instruction. Checkpoints in $A000–$BFFF count only while $01 bit 0 is clear: TSB's code there runs

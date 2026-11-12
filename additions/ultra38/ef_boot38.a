@@ -1,0 +1,56 @@
+; -----------------------------------------------------------------------------
+; TSB Ultra-38 - EasyFlash boot code, bank 0 ROMH (phase B2.2 spike)
+;
+; At power-on and on every reset the EasyFlash starts in Ultimax mode with bank 0
+; (ROMH at $e000). A trampoline in RAM selects the Ultra-38 launcher's ROML bank
+; (U38_LAUNCH_BANK, CBM80 at $8000), sets 8K mode and enters the KERNAL reset.
+; Commodore key held at reset: cartridge off instead (stock C64, as GO 64).
+; EasyFlash $de02: $04 off, $05 Ultimax, $06 8K (ROML at $8000), $07 16K.
+; -----------------------------------------------------------------------------
+
+	tramp	= $0200
+
+	* = $e000
+
+reset	sei
+	ldx #$ff
+	txs
+	cld
+	ldx #tend - tstart - 1
+-	lda tstart,x
+	sta tramp,x
+	dex
+	bpl -
+	lda #$00		; CIA 1: port A out, port B in, scan column 7
+	sta $dc03
+	lda #$ff
+	sta $dc02
+	lda #$7f
+	sta $dc00
+	ldx #U38_LAUNCH_BANK
+	ldy #$06		; default: 8K mode, Ultra-38 launcher
+	lda $dc01
+	and #$20		; Commodore key (row 5 of column 7) down?
+	bne +
+	ldx #0
+	ldy #$04		; yes: GO 64, cartridge off
++	lda #$ff
+	sta $dc00
+	lda #$00
+	sta $dc02
+	jmp tramp
+
+tstart
+!pseudopc tramp {
+	stx $de00		; bank of the launcher (ROML)
+	sty $de02		; leave Ultimax mode: $06 8K or $04 off
+	jmp $fce2		; KERNAL reset
+}
+tend
+
+nmi	rti
+
+	* = $fffa
+	!word nmi
+	!word reset
+	!word nmi

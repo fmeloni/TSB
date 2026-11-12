@@ -11,4 +11,4 @@ python3 tools/neodetect.py "$D64" --check tests/detector/expected.json > build/d
 python3 tools/neodetect.py "$D64" --load --check tests/detector/expected.json > build/detector_load.log || { cat build/detector_load.log; echo "FAIL detector LOAD,8,1 check"; exit 1; }
 python3 tools/neodetect.py "$D64" --target ultra38 --check tests/detector/expected_ultra38.json > build/detector_corpus38.log || { cat build/detector_corpus38.log; echo "FAIL detector corpus (ultra38)"; exit 1; }
 python3 tools/neodetect.py "$D64" --target ultra38 --load --check tests/detector/expected_ultra38.json > build/detector_load38.log || { cat build/detector_load38.log; echo "FAIL detector LOAD,8,1 check (ultra38)"; exit 1; }
-echo "PASS detector ($(grep -c '^ok' build/detector_cases.log) cases; corpus: $(tail -1 build/detector_corpus.log); $(tail -1 build/detector_load.log); ultra38 proposed: $(tail -1 build/detector_corpus38.log))"
+echo "PASS detector ($(grep -c '^ok' build/detector_cases.log) cases; corpus: $(tail -1 build/detector_corpus.log); $(tail -1 build/detector_load.log); ultra38 (provisional): $(tail -1 build/detector_corpus38.log))"

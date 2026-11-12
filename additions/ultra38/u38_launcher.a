@@ -1,0 +1,78 @@
+; -----------------------------------------------------------------------------
+; TSB Ultra-38 - launcher in ROML bank U38_LAUNCH_BANK (phase B2.2 spike)
+;
+; Started by the KERNAL through CBM80 (8K mode, $37: ROML $8000, BASIC ROM, KERNAL).
+; Initialises the machine as a cartridge does, copies TSB Neo's $C000-$CFFF area
+; (data, tables and the code that runs there, as in TSB Neo) and the RAM core
+; ($dfxx, $ffxx) from this bank, then enters TSB's COLD in flash (bank 1, 16K mode,
+; CPU port $36). COLD sets MEMSIZ $A000 and prints the Ultra-38 start-up screen.
+; Inputs (assembler -D): U38_BEFCOLD (COLD's address in bank 1), U38_DF_LEN, U38_FF_LEN.
+; -----------------------------------------------------------------------------
+
+	* = $8000
+	!word launcher
+	!word launcher
+	!byte $c3,$c2,$cd,$38,$30	; CBM80
+
+launcher
+	sei
+	stx $d016
+	jsr $fda3		; IRQ/CIA init
+	jsr $fd50		; RAM test (stops at the cartridge; COLD sets MEMSIZ $A000)
+	jsr $fd15		; KERNAL vectors
+	jsr $ff5b		; VIC, screen
+	lda #<ramimg		; $C000-$CFFF
+	sta $fb
+	lda #>ramimg
+	sta $fc
+	lda #$00
+	sta $fd
+	lda #$c0
+	sta $fe
+	ldx #$10
+	ldy #0
+-	lda ($fb),y
+	sta ($fd),y
+	iny
+	bne -
+	inc $fc
+	inc $fe
+	dex
+	bne -
+	ldx #U38_DF_LEN - 1	; RAM core: EasyFlash RAM $df0b-
+-	lda dfimg,x
+	sta $df0b,x
+	dex
+	cpx #$ff
+	bne -
+	ldx #U38_FF_LEN - 1	; RAM under the KERNAL $ff40-$ffff
+-	lda ffimg,x
+	sta $ff40,x
+	dex
+	cpx #$ff
+	bne -
+	ldx #tend - tstart - 1
+-	lda tstart,x
+	sta $0200,x
+	dex
+	bpl -
+	jmp $0200
+
+tstart
+!pseudopc $0200 {
+	lda #1			; core bank
+	sta $de00
+	lda #$36		; TSB state: BASIC ROM out (RAM at $8000), ROMH at $a000
+	sta $01
+	lda #$07		; 16K mode
+	sta $de02
+	ldx #$f7		; BASIC's RAM init writes $01fc/$01fd: keep the ROM-call stub's bytes below
+	txs
+	jmp U38_BEFCOLD
+}
+tend
+
+ramimg	!bin "../../build/u38/fl/ram_c000.bin"
+dfimg	!bin "../../build/u38/fl/df.bin"
+ffimg	!bin "../../build/u38/fl/ff.bin"
+	!fill $a000 - *, $ff

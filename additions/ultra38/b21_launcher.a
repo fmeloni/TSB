@@ -1,0 +1,74 @@
+; -----------------------------------------------------------------------------
+; TSB Ultra-38 B2.1 speed spike - EasyFlash ROML bank 0 launcher
+;
+; ef_boot.a (ROMH bank 0) puts the EasyFlash into 8K mode, bank 0, and enters the
+; KERNAL reset, which starts this through CBM80. It copies the spike image
+; (build/u38/b21/img.bin: TSB Neo with every crossing routed through the
+; Ultra-38 stubs, $6000-$cfff) from ROML banks 1-4 to RAM, switches the
+; cartridge off, installs the RAM core ($dfxx, $ffxx) and starts TSB Neo's COLD.
+; -----------------------------------------------------------------------------
+
+	IMG_START	= $6000
+	IMG_PAGES	= $70		; $6000-$cfff
+
+	* = $8000
+	!word launcher
+	!word launcher
+	!byte $c3,$c2,$cd,$38,$30	; CBM80
+
+launcher
+	sei
+	stx $d016
+	jsr $fda3		; IRQ/CIA init
+	jsr $fd50		; RAM test (MEMSIZ: TSB sets its own)
+	jsr $fd15		; KERNAL vectors
+	jsr $ff5b		; VIC, screen
+	ldx #copy_end - copy_start - 1
+-	lda copy_start,x
+	sta $0100,x
+	dex
+	bpl -
+	jmp $0100
+
+copy_start
+!pseudopc $0100 {
+	lda #1
+	sta $de00		; image starts in ROML bank 1
+	sta $02
+	lda #$00
+	sta $fb
+	sta $fd
+	lda #$80
+	sta $fc
+	lda #>IMG_START
+	sta $fe
+	ldx #IMG_PAGES
+	ldy #0
+-	lda ($fb),y
+	sta ($fd),y
+	iny
+	bne -
+	inc $fe
+	inc $fc
+	lda $fc
+	cmp #$a0
+	bne +
+	lda #$80
+	sta $fc
+	inc $02
+	lda $02
+	sta $de00
++	dex
+	bne -
+	lda #$04		; cartridge off
+	sta $de02
+	jsr u38_install		; RAM core to $dfxx / $ffxx
+	ldx #$f7		; BASIC's RAM init ($e3bf, called by COLD through a ROM-call stub) writes
+	txs			; $01fc/$01fd: keep the stub's stack bytes below them
+	jmp ($8000)		; TSB Neo: sstart -> COLD
+}
+copy_end
+
+	u38_install = U38_INSTALL_ADDR
+
+	!fill $a000 - *, $ff	; bank 0 = 8K; the Makefile appends img.bin as banks 1-4

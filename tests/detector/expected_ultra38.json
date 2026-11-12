@@ -1,6 +1,6 @@
 {
  "_comment": "PROPOSED (phase B1, not yet decided by Fafa): expected Neo-only verdicts for Ultra-38 (BASIC $0801-$9FFF, Neo's $C000-$CFFF layout kept). Same programs and sets as expected.json; 'set' here is the Ultra-38 set: neo = flagged, ultra = must run in Ultra-38 without a warning. 'was' = the set in expected.json (Ultra-51). See reports/B1-ultra38-design.md, 'Detector for Ultra-38'.",
- "_status": "proposed",
+ "_status": "accepted provisionally (Fafa, 12 Nov); confirm in B4.5",
  "TSB": {
   "neo_only": true,
   "set": "system",

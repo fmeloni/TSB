@@ -26,10 +26,18 @@ is used; the Classic Simons slot is dropped.
   ` 64K RAM SYSTEM 38911 BASIC BYTES FREE` (1 leading space, ONE space after SYSTEM, unlike the stock two: Fafa's
   spec, keep it unless he says otherwise). The number is MEMSIZ − TXTTAB computed at boot, never a constant. Golden
   for this screen, plus a pixel check at the final gate.
-- B1 (proposed, pending Fafa): layout H = all TSB code in 8K ROMH windows at $A000 with $01=$36 + EasyFlash 16K
-  ($8000-$9FFF RAM, KERNAL and I/O visible; checked in VICE); BASIC ROM calls through a cartridge-off RAM stub; Neo's core
-  and commands in different banks with the hot helpers copied. Predicted +1..+5% over Neo on tests/bench (model).
-  Neo itself is +3/+10/+22% over a stock C64 on V2 math/strings/GOSUB. Detector for Ultra-38: 12 Neo-only / 27 Ultra.
+- Decided (Fafa, 12 Nov, after B1): layout H = all TSB code in 8K ROMH windows at $A000 with $01=$36 + EasyFlash 16K
+  ($8000-$9FFF RAM, KERNAL and I/O visible); BASIC ROM calls through a cartridge-off RAM stub. Ultra-38 detector
+  12 Neo-only / 27 Ultra accepted provisionally (confirm in B4.5). Flash banks 16-47 reserved for Ultra-51.
+  D4 pending: always report the slowdown against TSB Neo AND against a stock C64.
+- B2 (reports/B2-spike.md): measured layout H (B2.1 speed spike) +3.6..+18.4% over Neo, V2 math/strings/GOSUB
+  +6.8/+15.1/+35.5% over a stock C64 (Neo alone +3.1/+7.6/+22.1). B1's model was optimistic: its cycles per IRQ were
+  the video frame (19656) instead of the KERNAL's CIA timer (16422 PAL, 17046 NTSC), the real stubs cost
+  entry 34 / exit 47 / ROM call 110 / far call 100 / far jump 46 cycles, and B1 missed TSB's own ROM-call helper,
+  tail calls, the IRQ wrapper and function trampolines. B2.2 flash spike build/u38_spike.crt runs all of Neo's code from
+  six ROMH banks, the subset byte-identical to Neo; open porting items listed in the report. B4.4 note (pending Fafa):
+  a Neo-only program > 30,719 bytes (or ending at/above $8000) cannot switch to Neo: warning says too large for TSB
+  Neo, no Y, runs in Ultra-38.
 - The "Decided design (10 Nov)" below describes Ultra-51; where it says 51,199 / $0801–$CFFF it is superseded for
   Ultra-38.
 
@@ -179,6 +187,16 @@ the cartridge ships as TSB Neo + GO 64 only.
 - Phase B1 (reports/B1-ultra38-design.md): `make bench` profiles tests/bench/*.bas on Neo and runs the Ultra-38 cost model
   (~5 min, not part of `make test`); `make test` runs tests/neo_inventory.py; tests/detector.sh checks both detector targets
   (ultra51 decided, ultra38 proposed in tests/detector/expected_ultra38.json).
+- Phase B2: `make build` also makes build/u38_b21.crt (speed spike, Neo in RAM with the stubs, MEMSIZ $6000) and
+  build/u38_spike.crt (flash spike) from tools/u38gen.py; `make test` runs tests/u38_gen.py and tests/u38_spike.py --quick
+  (PAL/NTSC); `make test-u38` the full spike tests; `make bench38` the cycle-exact timings (tools/u38bench.py: CIA 2 as
+  a 32-bit counter, RUN to READY, MEMSIZ $6000 on every system); `tests/matrix.sh spike38` all 8 machines.
+  tools/trace38.py / trace38f.py single-step a spike to find where TSB code went wrong.
+- Ultra-38 facts (B2, verified in VICE): the cartridge is on exactly when $01 bit 0 is clear; switches write $01 first,
+  $DE02 second. $DF0B-$DFFD is full (228/243). BASIC's EVAL pops its caller's return for unary minus/NOT (no frames on
+  the V2 IEVAL path); CLR/NEW reset SP to $FA keeping one return; $E3BF writes $01FC/$01FD; the KERNAL reset looks
+  for CBM80 before it sets $01 (set $37 first); TSB Neo's RAM NMI vector does not restore the port (Neo cannot take NMIs
+  while its KERNAL is off).
 - ACME is needed for `make build` (`brew install acme`, or tools/setup-linux.sh on Linux).
 
 ## Rules

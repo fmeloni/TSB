@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM upper  border 6 bg 6  sprites $00
+ 0|U38 MEMORY
+ 1|
+ 2|
+ 3|ARRAYS END 40696 ERRORS 0
+ 4|
+ 5|MEMFILL OK
+ 6|FREE 257
+ 7|
+ 8|READY.
+ 9|
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|

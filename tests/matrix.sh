@@ -6,6 +6,8 @@
 #   tests/matrix.sh disk [crt]    the disk-heavy subset on all 8 machines
 #   tests/matrix.sh oldntsc [crt] optional: full suites on the 4 oldntsc machines (VICE -model oldntsc, VIC-II
 #                                 6567R56A). Not part of change/gate until Fafa says whether his NTSC C64 has that chip.
+#   tests/matrix.sh spike38       phase B2.2: the Ultra-38 flash spike tests (tests/u38_spike.py, build/u38_spike.crt;
+#                                 CRT-independent) on all 8 machines; gate also runs them
 #   MACHINES="m1 m2 ..." tests/matrix.sh gate [crt]   any list of machines, e.g. oldntsc-stock-stock
 # Every mode also runs the task 2.1 core spike (tests/core21.py, build/spike21.crt; CRT-independent) on each machine
 # it runs a full suite on: change = pal/ntsc-stock-stock, gate = all 8.
@@ -52,14 +54,24 @@ spike() {  # spike <machine>: tests/core21.py
   [ $rc = 0 ] || { fails=$((fails + 1)); grep FAIL "$log" | sed "s/^/    $m: /"; }
 }
 
+spike38() {  # spike38 <machine>: tests/u38_spike.py
+  local m=$1 video=${1%%-*} rest=${1#*-}
+  local kernal=${rest%-*} dos=${rest#*-} log=$LOGDIR/$1.u38_spike.log
+  if [[ $m == *jiffy* ]] && [ ! -f "${JIFFY_KERNAL:-corpus/roms/JiffyDOS_C64/JiffyDOS_C64_6.01.bin}" ]; then return; fi
+  python3 tests/u38_spike.py --video $video --kernal $kernal --dos $dos > "$log" 2>&1; local rc=$?
+  summary+=$(printf "\n%-18s %-9s %s" "$m" u38_spike "$(tail -1 "$log")")
+  [ $rc = 0 ] || { fails=$((fails + 1)); grep FAIL "$log" | sed "s/^/    $m: /"; }
+}
+
 case $MODE in
   change) for m in pal-stock-stock ntsc-stock-stock; do run $m demos; run $m commands; spike $m; done
           for m in $ALL; do case $m in pal-stock-stock|ntsc-stock-stock) continue;; esac
             run $m demos $DISK_DEMOS; run $m commands $DISK_CMDS; done ;;
-  gate)   for m in $ALL; do run $m demos; run $m commands; spike $m; done ;;
+  gate)   for m in $ALL; do run $m demos; run $m commands; spike $m; spike38 $m; done ;;
+  spike38) for m in $ALL; do spike38 $m; done ;;
   disk)   for m in $ALL; do run $m demos $DISK_DEMOS; run $m commands $DISK_CMDS; done ;;
   oldntsc) for m in $OLDNTSC; do run $m demos; run $m commands; spike $m; done ;;
-  *) echo "usage: [MACHINES=...] tests/matrix.sh change|gate|disk|oldntsc [crt]"; exit 2 ;;
+  *) echo "usage: [MACHINES=...] tests/matrix.sh change|gate|disk|oldntsc|spike38 [crt]"; exit 2 ;;
 esac
 echo "matrix $MODE on $CRT:$summary"
 [ $fails = 0 ] && echo "PASS matrix_$MODE" || { echo "FAIL matrix_$MODE ($fails runs)"; exit 1; }

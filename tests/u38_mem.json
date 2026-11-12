@@ -1,0 +1,33 @@
+{
+ "_comment": "Ultra-38 B2.2: memory programs, Ultra-38 only (TSB Neo has 30719 bytes): self-checking ('expect'), nothing compared with a golden.",
+ "programs": [
+  {
+   "bas": "tests/u38/memfill.bas",
+   "compare": [],
+   "expect": [
+    "memfill ok",
+    "errors 0"
+   ],
+   "steps": [
+    {
+     "end": 1,
+     "max": 6000
+    }
+   ]
+  },
+  {
+   "bas": "tests/u38/strings.bas",
+   "compare": [],
+   "expect": [
+    "strings ok",
+    "errors 0"
+   ],
+   "steps": [
+    {
+     "end": 1,
+     "max": 6000
+    }
+   ]
+  }
+ ]
+}

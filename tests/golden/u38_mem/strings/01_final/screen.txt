@@ -1,0 +1,26 @@
+; screen $0400  text  charset ROM upper  border 6 bg 6  sprites $00
+ 0|U38 STRINGS
+ 1|
+ 2|
+ 3|BOTTOM 36982 ERRORS 0
+ 4|ZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+ 5|
+ 6|STRINGS OK
+ 7|
+ 8|READY.
+ 9|
+10|
+11|
+12|
+13|
+14|
+15|
+16|
+17|
+18|
+19|
+20|
+21|
+22|
+23|
+24|
