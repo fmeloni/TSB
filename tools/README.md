@@ -25,6 +25,13 @@ Determinism: `vicemon.Vice` starts VICE with `-raminitrandomchance 0 -seed 1` (n
 keyboard feed, so runs give the same result under any host load (`tests/stress_typing.sh`). `demo_capture.py
 --repeat N` runs each selected scenario N times. (`run_demo.sh` is a manual tool and still uses VICE's `-keybuf`.)
 
+Phase B1 (Ultra-38 design, reports/B1-ultra38-design.md): `neoinventory.py <acme report>` lists what TSB Neo's code
+does that a flash layout must handle (ROM calls, $01 writes, writes into its own code, pointer accesses, cross-region
+calls); `neoprofile.py bench.bas ...` counts those events on Neo while a program runs (VICE checkpoints that don't
+stop the CPU; $A000-$BFFF ones only count with the BASIC ROM switched out); `ultra38model.py` turns the counts into a
+slowdown prediction for the two layouts. `make bench` runs all three on tests/bench/. `neodetect.py --target ultra38`
+applies the Ultra-38 detector rules.
+
 C64 ROMs are not in this repo. Set `VICE_DATA` to a folder with `C64/` and `DRIVES/`
 holding the ROM files from a VICE install (for example `share/vice` of VICE 3.10).
 

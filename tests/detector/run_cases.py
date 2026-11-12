@@ -8,6 +8,7 @@ import neodetect, tsblist  # noqa: E402
 
 words = tsblist.tsb_words(); tab = tsblist._tsb_table(); bad = 0
 for c in json.load(open(os.path.join(HERE, "cases.json")))["cases"]:
+    neodetect.set_target(c.get("target", "ultra51"))  # phase B1: rules per target
     hits = neodetect.scan(tsblist.make_prg(c["prg"], table=tab), words)
     got = sorted({h["rule"] for h in hits})
     ok = got == sorted(c["rules"]); bad += not ok

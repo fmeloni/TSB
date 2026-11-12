@@ -26,6 +26,10 @@ is used; the Classic Simons slot is dropped.
   ` 64K RAM SYSTEM 38911 BASIC BYTES FREE` (1 leading space, ONE space after SYSTEM, unlike the stock two: Fafa's
   spec, keep it unless he says otherwise). The number is MEMSIZ − TXTTAB computed at boot, never a constant. Golden
   for this screen, plus a pixel check at the final gate.
+- B1 (proposed, pending Fafa): layout H = all TSB code in 8K ROMH windows at $A000 with $01=$36 + EasyFlash 16K
+  ($8000-$9FFF RAM, KERNAL and I/O visible; checked in VICE); BASIC ROM calls through a cartridge-off RAM stub; Neo's core
+  and commands in different banks with the hot helpers copied. Predicted +1..+5% over Neo on tests/bench (model).
+  Neo itself is +3/+10/+22% over a stock C64 on V2 math/strings/GOSUB. Detector for Ultra-38: 12 Neo-only / 27 Ultra.
 - The "Decided design (10 Nov)" below describes Ultra-51; where it says 51,199 / $0801–$CFFF it is superseded for
   Ultra-38.
 
@@ -172,6 +176,9 @@ the cartridge ships as TSB Neo + GO 64 only.
   (`"from": "gate"`). VICE runs with `-raminitrandomchance 0 -seed 1` (random power-on RAM made parallel runs flaky), and typed keys are
   written into $0277/$C6 by the harness at KERNAL IRQ entries, not by VICE's keybuf (`tests/stress_typing.sh`).
 - Core spike: `make test` runs tests/core21.py (build/spike21.crt) on PAL and NTSC; tests/matrix.sh runs it per machine.
+- Phase B1 (reports/B1-ultra38-design.md): `make bench` profiles tests/bench/*.bas on Neo and runs the Ultra-38 cost model
+  (~5 min, not part of `make test`); `make test` runs tests/neo_inventory.py; tests/detector.sh checks both detector targets
+  (ultra51 decided, ultra38 proposed in tests/detector/expected_ultra38.json).
 - ACME is needed for `make build` (`brew install acme`, or tools/setup-linux.sh on Linux).
 
 ## Rules

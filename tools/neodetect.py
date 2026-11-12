@@ -26,6 +26,16 @@ Rules (an address A is "in TSB" when $8000 <= A <= $CFFF, the RAM TSB Neo occupi
   i   info only: LOAD name,dev,1 with no address (target known only from the file header). Not a flag
       at RUN: the LOAD-time check below covers it.
 
+Targets (--target, default ultra51; phase B1): the rules above are for Ultra-51 (BASIC up to $CFFF). For Ultra-38
+(BASIC $0801-$9FFF, Neo's $C000-$CFFF layout kept, TSB code in flash) "in TSB" is narrower:
+  ultra38  N1-N4/N6 for $8000-$BFFF (Neo's code there is gone: $8000-$9FFF is BASIC RAM, $A000-$BFFF is RAM under
+           the BASIC ROM). In $C000-$CFFF data stays where Neo has it, so only SYS into Neo's code there
+           ($C750-$C9CE, $CC00-$CFFF) and POKE/D!POKE into $C750-$C9CE (code patches) flag. SYS $C000 does not:
+           Neo's one-shot memhook there is only called by the disk loader, and demos SYS their own code they
+           LOADed to $C000 (DIRSELECT, EXTINSTALLER), which works the same in Ultra-38.
+           No N5 (colour data and MEM screen stay at $C000/$CC00), no remap. X: POKE 56,hi exempts hi..$9F only.
+           LOAD-time: header address in $8000-$BFFF.
+
 LOAD-time check (decided 11 Nov, task 5.3): LOAD"x",8,1 of a file whose header load address is in $8000-$CFFF
 gives the same warning when the load starts; everything else is checked at RUN.
   neodetect.py <disk.d64> --load [--check expect.json]   files on the disk that would warn at LOAD"x",8,1
@@ -47,8 +57,29 @@ V2 = {0x80 + i: w for i, w in enumerate(tsblist.V2)}
 TOK = {w: t for t, w in V2.items()}
 
 
+TARGETS = {
+    "ultra51": {"lo": TSB_LO, "hi": TSB_HI, "sys_code": [], "poke_code": [], "n5": True, "remap": REMAP,
+                "free_hi": TSB_HI, "load": (TSB_LO, TSB_HI)},
+    "ultra38": {"lo": 0x8000, "hi": 0xBFFF, "sys_code": [(0xC750, 0xC9CE), (0xCC00, 0xCFFF)],
+                "poke_code": [(0xC750, 0xC9CE)], "n5": False, "remap": [], "free_hi": 0x9FFF,
+                "load": (0x8000, 0xBFFF)},
+}
+T = TARGETS["ultra51"]
+
+
+def set_target(name):
+    global T
+    T = TARGETS[name]
+
+
 def in_tsb(a):
-    return TSB_LO <= a <= TSB_HI
+    return T["lo"] <= a <= T["hi"]
+
+
+def in_code(a, name):
+    """Ultra-38: an address in Neo's code inside $C000-$CFFF that this access would still break."""
+    areas = T["sys_code"] if name == "SYS" else T["poke_code"] if name.endswith("POKE") else []
+    return any(lo <= a <= hi for lo, hi in areas)
 
 
 def lex(body, words):
@@ -139,7 +170,7 @@ def scan(prg, words):
         p = e + 1
 
         def hit(rule, addr, what):
-            free = memtop is not None and memtop <= addr <= TSB_HI and rule in ("N1", "N2", "N3", "N5", "N6")
+            free = memtop is not None and memtop <= addr <= T["free_hi"] and rule in ("N1", "N2", "N3", "N5", "N6")
             hits.append({"line": num, "rule": "X" if free else rule, "addr": addr, "what": what})
 
         for i, (k, v) in enumerate(toks):
@@ -154,18 +185,19 @@ def scan(prg, words):
                     a = args_after(toks, i + 2)
                 addr = lead(a[0]) if a else None
                 if addr is None: continue
-                if in_tsb(addr):
+                if in_tsb(addr) or in_code(addr, name):
                     hit("N1", addr, f"{name} ${addr:04X}")
                 if name.endswith("POKE") and len(a) > 1:
                     val = lead(a[1])
                     if val is None: continue
-                    if name == "D!POKE" and addr in VECTORS and in_tsb(val):
+                    if name == "D!POKE" and addr in VECTORS and (in_tsb(val) or in_code(val, "SYS")):
                         hit("N4", val, f"D!POKE vector ${addr:04X},${val:04X}")
-                    if name == "POKE" and addr - 1 in VECTORS and TSB_LO >> 8 <= val <= TSB_HI >> 8:
+                    if name == "POKE" and addr - 1 in VECTORS and (T["lo"] >> 8 <= val <= T["hi"] >> 8
+                                                                   or in_code(val << 8, "SYS")):
                         hit("N4", val << 8, f"POKE vector hi ${addr:04X},${val:02X}")
-                    if name == "POKE" and addr == 0x0288 and TSB_LO >> 8 <= val <= TSB_HI >> 8:
+                    if T["n5"] and name == "POKE" and addr == 0x0288 and TSB_LO >> 8 <= val <= TSB_HI >> 8:
                         hit("N5", val << 8, f"POKE $0288,${val:02X} (screen editor at ${val << 8:04X})")
-                    if name == "POKE" and addr == 0xDD00 and val & 3 == 0:
+                    if T["n5"] and name == "POKE" and addr == 0xDD00 and val & 3 == 0:
                         hit("N5", 0xC000, f"POKE $DD00,${val:02X} (VIC bank 3)")
                     if name == "POKE" and addr == 56 and val <= TSB_HI >> 8:
                         memtop = val << 8 if memtop is None else min(memtop, val << 8)
@@ -182,14 +214,14 @@ def scan(prg, words):
             elif v == "SCRLD" and nxt == ("kw", "DEF"):
                 a = args_after(toks, i + 2)
                 pg = lead(a[0]) if a else None
-                if pg is not None and TSB_LO >> 8 <= pg <= TSB_HI >> 8:
+                if pg is not None and T["lo"] >> 8 <= pg <= T["hi"] >> 8:
                     hit("N3", pg << 8, f"SCRLD DEF page ${pg:02X}")
             elif v == "MEM" and nxt in (("kw", "CLR"), ("kw", "DEF")):
                 a = args_after(toks, i + 2)
                 idx = 0 if nxt[1] == "CLR" else 1
                 addr = lead(a[idx]) if len(a) > idx else None
                 if addr is None or not in_tsb(addr): continue
-                area = next((n for lo, hi, n in REMAP if lo <= addr <= hi), None)
+                area = next((n for lo, hi, n in T["remap"] if lo <= addr <= hi), None)
                 if area:
                     hits.append({"line": num, "rule": "remap", "addr": addr, "what": f"MEM{nxt[1]} ${addr:04X} ({area})"})
                 else:
@@ -215,7 +247,7 @@ def programs(d64):
 
 def load_warns(load_addr):
     """The LOAD-time rule: a secondary-address-1 load whose header address lies in TSB's RAM."""
-    return TSB_LO <= load_addr <= TSB_HI
+    return T["load"][0] <= load_addr <= T["load"][1]
 
 
 def load_table(d64):
@@ -233,7 +265,7 @@ def main_load(a, check):
     want = set(check.get("_load_warn", [])) if check else None
     for name, lo, hi, w in load_table(a[0]):
         mark = "WARN" if w else "    "
-        note = "  (ends in TSB RAM)" if not w and lo < TSB_LO <= hi else ""
+        note = "  (ends in TSB RAM)" if not w and lo < T["load"][0] <= hi else ""
         line = f"{mark} {name:18} ${lo:04X}-${hi:04X}{note}"
         if want is not None:
             ok = (name in want) == w
@@ -247,6 +279,8 @@ def main_load(a, check):
 def main(a):
     verbose = "-v" in a; as_json = "--json" in a
     a = [x for x in a if x not in ("-v", "--json")]
+    if "--target" in a:
+        i = a.index("--target"); set_target(a[i + 1]); a = a[:i] + a[i + 2:]
     check = None
     if "--check" in a:
         i = a.index("--check"); check = json.load(open(a[i + 1])); a = a[:i] + a[i + 2:]

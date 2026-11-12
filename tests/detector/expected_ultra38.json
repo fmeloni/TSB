@@ -1,0 +1,251 @@
+{
+ "_comment": "PROPOSED (phase B1, not yet decided by Fafa): expected Neo-only verdicts for Ultra-38 (BASIC $0801-$9FFF, Neo's $C000-$CFFF layout kept). Same programs and sets as expected.json; 'set' here is the Ultra-38 set: neo = flagged, ultra = must run in Ultra-38 without a warning. 'was' = the set in expected.json (Ultra-51). See reports/B1-ultra38-design.md, 'Detector for Ultra-38'.",
+ "_status": "proposed",
+ "TSB": {
+  "neo_only": true,
+  "set": "system",
+  "was": "system",
+  "why": "POKE $8082"
+ },
+ "TSBDEMO.DMO": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "PEEK $8B11; PEEK $8B12"
+ },
+ "FONTDEMO2.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "neo",
+  "why": "only Neo's $C000-$CFFF areas, which Ultra-38 keeps (Ultra-51 flag: POKE/PEEK $C516 (TSB jiffy counter))"
+ },
+ "TEXT-IN-GFX.DMO": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "POKE $B903; POKE $B912; POKE $B903"
+ },
+ "GRAFIKFONTS.DMO": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "POKE $B34B; POKE $B34B"
+ },
+ "DRAW.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "IMG VIEWER.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "neo",
+  "why": "only Neo's $C000-$CFFF areas, which Ultra-38 keeps (Ultra-51 flag: PEEK($C02C) (directory text at $C000); also N5)"
+ },
+ "INSERT.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "CENTER.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "DIGITS.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "(B)FLASH.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "neo",
+  "why": "only Neo's $C000-$CFFF areas, which Ultra-38 keeps (Ultra-51 flag: WAIT $C5C7, POKE/PEEK $C516)"
+ },
+ "BLINK.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "CURTAIN.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "COLORCOMBI.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "FADE.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "DESIGN3.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "OBLIQUE.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "MAYHEM.DMO": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "POKE $A5DB; POKE $A5D7; POKE $A5DB"
+ },
+ "4FACHZOOM.DMO": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "POKE $9519; POKE $9519"
+ },
+ "CHECK-DETECT.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "SCREENS.DMO": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "SYS $8B65"
+ },
+ "SWITCHSCREEN.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "neo",
+  "why": "only Neo's $C000-$CFFF areas, which Ultra-38 keeps (Ultra-51 flag: N5 only: POKE $0288,$CC and POKE $DD00,$94 point the screen editor and the VIC at the MEM screen $CC00, which is BASIC workspace in U2+)"
+ },
+ "MAP.DMO": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "D!PEEK $897E; D!POKE $897E; D!PEEK $897E"
+ },
+ "MULTIMAP.DMO": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "D!PEEK $897E; D!POKE $897E; POKE $99CE"
+ },
+ "DO-TEST.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "BLOCKCOPY.DMO": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "SYS $A3EC"
+ },
+ "SHOW DRIVES.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "DIRSELECT.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "neo",
+  "why": "only Neo's $C000-$CFFF areas, which Ultra-38 keeps (Ultra-51 flag: LOAD EXT.DIRSELECT to $C000, SYS $C000, PEEK($C00C))"
+ },
+ "WRITEIMAGES2REU": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "neo",
+  "why": "only Neo's $C000-$CFFF areas, which Ultra-38 keeps (Ultra-51 flag: PEEK($C02C); also N5)"
+ },
+ "SHOWIMAGESINREU": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": "MEMDEF ...,$C000 = colour data: rule 'remap', Ultra's MEMLOAD must redirect it (no warning)"
+ },
+ "SOUND1.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "SOUND2.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "neo",
+  "why": "only Neo's $C000-$CFFF areas, which Ultra-38 keeps (Ultra-51 flag: POKE/PEEK $C516)"
+ },
+ "MUSIC1-WTEXT.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "MUSIC2-3VOIC.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "MUSIC3TRIPLT.DMO": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "NEOÂÌISTER 1.03": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "D!POKE $897C"
+ },
+ "SMON": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "D!POKE vector $0308,$80DC"
+ },
+ "TACO.TSB": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "ultra",
+  "why": ""
+ },
+ "EXTINSTALLER.TSB": {
+  "neo_only": false,
+  "set": "ultra",
+  "was": "neo",
+  "why": "only Neo's $C000-$CFFF areas, which Ultra-38 keeps (Ultra-51 flag: D!PEEK/SYS $C000, SCRLD DEF $C0)"
+ },
+ "OLD-AT.TSB": {
+  "neo_only": true,
+  "set": "neo",
+  "was": "neo",
+  "why": "PEEK $8B18; PEEK $947D"
+ },
+ "_target": {
+  "neo": 12,
+  "ultra": 27
+ },
+ "_load_warn": [
+  "TSB.NEO"
+ ]
+}

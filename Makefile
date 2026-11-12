@@ -3,7 +3,7 @@
 ACME ?= acme
 BUILD := build
 
-.PHONY: all build test test-demos test-commands clean
+.PHONY: all build test test-demos test-commands bench clean
 all: build
 
 build: $(BUILD)/tsbneo_disk.prg $(BUILD)/tsbneo_cart.bin $(BUILD)/TSBUltra.crt $(BUILD)/spike21.crt
@@ -46,6 +46,7 @@ test: build
 	python3 tests/crunch_corpus.py
 	python3 tests/no_rom_in_goldens.py
 	python3 tests/corpus_fixed.py
+	python3 tests/neo_inventory.py
 
 # Demo baseline (task 1.3): all corpus programs against tests/golden/, several minutes.
 test-demos: build
@@ -54,6 +55,14 @@ test-demos: build
 # Command suite (task 1.2): every TSB Neo keyword + BASIC V2 against tests/golden/commands/, about 1 min.
 test-commands: build
 	tests/commands_tsbneo.sh $(TSB_CRT)
+
+# Phase B1: count Ultra-38 events on TSB Neo for tests/bench/*.bas (one VICE per program, ~5 min) and predict the
+# slowdown of both layouts (reports/B1-ultra38-design.md).
+bench: build
+	mkdir -p $(BUILD)/b1/profile
+	for f in tests/bench/*.bas; do python3 tools/neoprofile.py --crt $(TSB_CRT) --out $(BUILD)/b1/profile/n_$$(basename $$f .bas).json $$f & done; wait
+	python3 tools/neoprofile.py --stock --out $(BUILD)/b1/profile/stock.json tests/bench/v2_*.bas
+	python3 tools/ultra38model.py $(BUILD)/b1/profile/n_*.json --md
 
 clean:
 	rm -rf $(BUILD)

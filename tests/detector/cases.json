@@ -27,5 +27,14 @@
   {"id": "memdef_mem_screen",   "rules": ["remap"], "prg": ["10 MEMDEF 1000,$CC00,0,3:MEMLOAD"]},
   {"id": "memclr_tsb_vars",     "rules": ["N6"],    "prg": ["10 MEMCLR $C500,16"]},
   {"id": "memtop_exemption",    "rules": ["X"],     "prg": ["10 POKE 56,192:CLR", "20 POKE 49152,1:SYS 49152"]},
-  {"id": "memtop_not_low_enough","rules": ["N1","X"],"prg": ["10 POKE 56,200:CLR", "20 POKE $C000,1:POKE $C800,1"]}
+  {"id": "memtop_not_low_enough","rules": ["N1","X"],"prg": ["10 POKE 56,200:CLR", "20 POKE $C000,1:POKE $C800,1"]},
+  {"id": "u38_c516_ok",          "target": "ultra38", "rules": [],      "prg": ["10 POKE $C516,0:A=PEEK($C516):WAIT $C5C7,1"]},
+  {"id": "u38_tsb_code",         "target": "ultra38", "rules": ["N1"],  "prg": ["10 POKE $9519,1:SYS $A3EC"]},
+  {"id": "u38_basic_ram_exempt", "target": "ultra38", "rules": ["X"],   "prg": ["10 POKE 56,128:CLR", "20 POKE $8000,1"]},
+  {"id": "u38_under_basic_rom",  "target": "ultra38", "rules": ["N1"],  "prg": ["10 POKE 56,128:CLR", "20 POKE $A000,1"]},
+  {"id": "u38_code_patch_c000",  "target": "ultra38", "rules": ["N1"],  "prg": ["10 POKE $C800,1"]},
+  {"id": "u38_sys_own_ext",      "target": "ultra38", "rules": ["i"],   "prg": ["10 IF A=0 THEN A=1:LOAD \"EXT\",8,1", "20 SYS $C000"]},
+  {"id": "u38_mem_screen",       "target": "ultra38", "rules": [],      "prg": ["10 POKE 648,$CC:POKE $DD00,$94:MEMDEF 1000,$CC00,0"]},
+  {"id": "u38_vector",           "target": "ultra38", "rules": ["N4"],  "prg": ["10 D!POKE $0308,$80DC"]},
+  {"id": "u38_load_tsb",         "target": "ultra38", "rules": ["N2"],  "prg": ["10 LOAD \"X\",8,0,$9000"]}
  ]}
