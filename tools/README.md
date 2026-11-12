@@ -18,7 +18,12 @@ Machine options (all VICE-based tools): `--video pal|ntsc`, `--kernal stock|jiff
 `run_crt.sh`). Default pal/stock/stock, the machine all goldens were captured on. `jiffy` uses
 `corpus/roms/JiffyDOS_C64/JiffyDOS_C64_6.01.bin` (VICE `-kernal`) and `corpus/roms/JiffyDOS_1541/JiffyDOS_1541-II_6.00.bin`
 (VICE `-dos1541`, drive type stays 1541 with true-drive emulation); override with `JIFFY_KERNAL` / `JIFFY_DOS`.
-`tests/matrix.sh change|gate|disk [crt]` runs the 8 machines (reports/2.0-machine-matrix.md).
+`tests/matrix.sh change|gate|disk|oldntsc [crt]` runs the 8 machines (reports/2.0-machine-matrix.md).
+
+Determinism: `vicemon.Vice` starts VICE with `-raminitrandomchance 0 -seed 1` (no random bits in power-on RAM), and
+`Vice.type()` writes keys into the KERNAL buffer ($0277/$C6) itself at KERNAL IRQ entries instead of using VICE's
+keyboard feed, so runs give the same result under any host load (`tests/stress_typing.sh`). `demo_capture.py
+--repeat N` runs each selected scenario N times. (`run_demo.sh` is a manual tool and still uses VICE's `-keybuf`.)
 
 C64 ROMs are not in this repo. Set `VICE_DATA` to a folder with `C64/` and `DRIVES/`
 holding the ROM files from a VICE install (for example `share/vice` of VICE 3.10).

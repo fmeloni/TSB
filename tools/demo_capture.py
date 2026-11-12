@@ -6,7 +6,7 @@
     tools/demo_capture.py explore <name> [maxframes]   LOAD+RUN a program, print the first stable screen
 
 Options: --crt FILE (default build/TSBneo.crt), --d64 FILE (default corpus/tsbneo_260228.d64),
-         --scenarios FILE (default tests/demos.json), --golden DIR (default tests/golden), -j N (parallel VICEs)
+         --scenarios FILE (default tests/demos.json), --golden DIR (default tests/golden), -j N (parallel VICEs), --repeat N (run each scenario N times)
          --video pal|ntsc|oldntsc, --kernal stock|jiffy, --dos stock|jiffy: the machine (default pal/stock/stock, the
          configuration of all goldens; same as the env variables C64_VIDEO/C64_KERNAL/C64_DOS, see vicemon.py)
 
@@ -469,7 +469,7 @@ def compare(sc, res, gdir):
 
 def main(a):
     opts = {"--crt": os.path.join(ROOT, "build/TSBneo.crt"), "--d64": os.path.join(ROOT, "corpus/tsbneo_260228.d64"),
-            "--scenarios": os.path.join(ROOT, "tests/demos.json"), "--golden": os.path.join(ROOT, "tests/golden"), "-j": "4"}
+            "--scenarios": os.path.join(ROOT, "tests/demos.json"), "--golden": os.path.join(ROOT, "tests/golden"), "-j": "4", "--repeat": "1"}
     args, explicit = [], set()
     while a:
         x = a.pop(0)
@@ -494,6 +494,7 @@ def main(a):
     scen = json.load(open(opts["--scenarios"]))["programs"]
     for s in scen: s.setdefault("id", slug(s.get("name") or os.path.splitext(os.path.basename(s["bas"]))[0]))
     todo = [s for s in scen if s.get("steps") is not None and (not names or s["id"] in names or s.get("name") in names)]
+    todo = todo * int(opts["--repeat"])   # --repeat N: run each scenario N times (determinism / stress checks)
 
     def one(sc):
         g = os.path.join(opts["--golden"], sc["id"])

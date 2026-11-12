@@ -103,6 +103,10 @@ class Vice:
         self.port = free_port()
         args = [x, "-default", "-directory", data, "-silent", "-sounddev", "dummy",
                 "-binarymonitor", "-binarymonitoraddress", f"ip4://127.0.0.1:{self.port}"]
+        # Power-on RAM: VICE's plain pattern, no random bit flips (default RAMInitRandomChance 10 flips ~2% of the
+        # bytes with a time-based seed, so runs started in the same second agree and others don't: step 2.0
+        # finding 6, e.g. the sprite 7 pointer at $07FF that CLS leaves alone). -seed fixes any other randomness.
+        args += ["-raminitrandomchance", "0", "-seed", "1"]
         args += machine_args()
         if warp: args.append("-warp")
         if crt and crt != "-": args += ["-cartcrt", crt]
@@ -216,12 +220,16 @@ class Vice:
         ($EA7E, after JSR SCNKEY), so programs polling PEEK(197)/PEEK(203) see the key as held."""
         if n <= 0: return
         cid = self.checkpoint(addr)
+        fid = self.checkpoint(0xFF48) if self.pending and addr != 0xFF48 else None
         kid = self.checkpoint(0xEA7E) if self.held_key is not None else None
         wids = [self.checkpoint(a) for a in (self.watch or {})]
         try:
             done = 0
             while done < n:
                 self.resume(); pc = self.wait_stopped()
+                if pc == 0xFF48: self._feed()
+                if pc == 0xFF48 and addr != 0xFF48:
+                    continue
                 if pc == 0xEA7E and self.held_key is not None:
                     self.poke(0xC5, [self.held_key], "cpu"); self.poke(0xCB, [self.held_key], "cpu")
                 elif self.watch and pc in self.watch and pc != addr:
@@ -230,6 +238,7 @@ class Vice:
                     done += 1
         finally:
             self.delete_checkpoint(cid)
+            if fid is not None: self.delete_checkpoint(fid)
             if kid is not None: self.delete_checkpoint(kid)
             for w in wids: self.delete_checkpoint(w)
 
@@ -252,16 +261,31 @@ class Vice:
         try:
             for _ in range(limit_frames):
                 self.resume(); pc = self.wait_stopped()
+                if pc == 0xFF48: self._feed()
                 if pc == addr: return True
             return False
         finally:
             self.delete_checkpoint(cid); self.delete_checkpoint(irq)
 
+    pending = b""   # typed PETSCII not yet in the KERNAL keyboard buffer
+
     def type(self, text):
-        """Feed text into the KERNAL keyboard buffer (VICE spools it when the buffer is full)."""
+        """Queue text for the KERNAL keyboard buffer. The harness writes it into $0277/$C6 itself, at KERNAL IRQ
+        entries ($FF48) while frames()/run_until() run: whenever the buffer is empty ($C6 = 0) it is filled with
+        up to XMAX ($0289, at most 10) queued keys. So a key arrives at a fixed IRQ count, whatever the host load
+        (VICE's own keyboard-buffer feed, monitor command $72, is not used)."""
         data = text if isinstance(text, (bytes, bytearray)) else petscii(text)
-        for i in range(0, len(data), 200):
-            self.cmd(0x72, bytes([len(data[i:i + 200])]) + data[i:i + 200])
+        self.pending += bytes(data)
+
+    def _feed(self):
+        """At an IRQ entry: move queued keys into an empty KERNAL keyboard buffer. The main program is not inside
+        GETIN's SEI section here (the IRQ was taken), and SCNKEY runs after this, so nothing is lost."""
+        if not self.pending: return
+        z = self.mem(0x00C6, 0x00C6, "ram")[0]
+        if z: return
+        n = min(len(self.pending), max(1, min(10, self.mem(0x0289, 0x0289, "ram")[0])))
+        self.poke(0x0277, self.pending[:n], "ram"); self.poke(0x00C6, [n], "ram")
+        self.pending = self.pending[n:]
 
     def joystick(self, port, value):
         """Set joystick bits (1 up,2 down,4 left,8 right,16 fire) on port 1 or 2; 0 releases."""

@@ -143,7 +143,8 @@ the cartridge ships as TSB Neo + GO 64 only.
   Goldens are pal-stock-stock only; JiffyDOS identity text (banner, drive ID) is mapped back before comparing;
   accepted machine-specific differences are a scenario's `known` list (status KNOWN; optional `"crt"` regex for
   Neo-only differences). `tests/matrix.sh change|gate|disk|oldntsc`. The music SID traces start at the first note
-  (`"from": "gate"`). A sprite failure in a parallel run: rerun it alone first (load-dependent keypress timing).
+  (`"from": "gate"`). VICE runs with `-raminitrandomchance 0 -seed 1` (random power-on RAM made parallel runs flaky), and typed keys are
+  written into $0277/$C6 by the harness at KERNAL IRQ entries, not by VICE's keybuf (`tests/stress_typing.sh`).
 - ACME is needed for `make build` (`brew install acme`, or tools/setup-linux.sh on Linux).
 
 ## Rules
