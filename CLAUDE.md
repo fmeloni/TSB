@@ -119,6 +119,12 @@ the cartridge ships as TSB Neo + GO 64 only.
   `73,JIFFYDOS 5.0 1541`. JiffyDOS LOAD runs with IRQs off (20K in < 1 s). TSB Neo `MERGE "x"` without a device number
   fails under the JiffyDOS KERNAL (its default-device routine leaves SA $6F, so the LOAD is absolute and overwrites the
   program); `MERGE "x",8` works. reports/2.0-machine-matrix.md.
+- Bank-switching core (task 2.1, reports/2.1-core.md): additions/ultra/core.a. Flash code runs in EasyFlash 16K mode with
+  $01=$37; $35 = RAM at $8000-$BFFF/$E000-$FFFF with I/O (slow path), $34 = all RAM (under I/O). Core at $DF0B-$DFFD
+  (EasyFlash RAM; $DF00-$DF0A never touched) and $FF40-$FFFF (RAM under the KERNAL, CPU vectors in RAM; Ultra must keep
+  programs out of it). FETCH/STORE macros: fast path for pointer high bytes $00-$7E and $C0-$FF; $7F is slow too
+  (pointer+Y can cross into $80xx). Cycles: FETCH 15/16 fast, 53 slow; STORE 30/31 fast, 80 slow; far call 204.
+  Switch banks only via FAR stubs or core_bank-then-$DE00. IRQ/NMI always reach the KERNAL in $37 + bank 0.
 - A LOAD inside a program restarts it from the first line with variables kept, also TSB's LOAD name,dev,0,addr
   (hence the corpus idiom IF A=0 THEN A=1:LOAD ...). SECURE (ON/OFF/0) hangs TSB Neo.
 
@@ -145,6 +151,7 @@ the cartridge ships as TSB Neo + GO 64 only.
   Neo-only differences). `tests/matrix.sh change|gate|disk|oldntsc`. The music SID traces start at the first note
   (`"from": "gate"`). VICE runs with `-raminitrandomchance 0 -seed 1` (random power-on RAM made parallel runs flaky), and typed keys are
   written into $0277/$C6 by the harness at KERNAL IRQ entries, not by VICE's keybuf (`tests/stress_typing.sh`).
+- Core spike: `make test` runs tests/core21.py (build/spike21.crt) on PAL and NTSC; tests/matrix.sh runs it per machine.
 - ACME is needed for `make build` (`brew install acme`, or tools/setup-linux.sh on Linux).
 
 ## Rules
