@@ -9,7 +9,27 @@ Decided D1 (10 Nov): TSB Neo 2.60.228 is the reference. "100% compatible" = beha
 TSB Neo, and every program on corpus/tsbneo_260228.d64 runs flawlessly. No original Simons' BASIC
 is used; the Classic Simons slot is dropped.
 
-## Decided design (10 Nov) — what we are building
+## Direction change (Fafa, 12 Nov; amended 12 Nov) — build Ultra-38 first
+- **Ultra-38** is built first: BASIC keeps the C64's own layout ($0801–$9FFF, **38,911 bytes free**, the C64's BASIC
+  ROM unmodified); TSB runs from flash, switched in only while TSB code runs; Neo's $C000–$CFFF layout stays. No
+  patched BASIC (D3's licensing question goes away). Speed is unmeasured: phase B1 measures it, B2 is its go/no-go.
+  Design report: reports/B1-ultra38-design.md (with a section "Path to Ultra-51").
+- **Ultra-51 = later goal, not shelved**: it comes later as another mode in the same cartridge. Keep additions/ultra/
+  (the 2.1 core) building and its tests passing. Ultra-38 leaves flash banks free for it, makes the mode switch generic
+  (GO 64 and GO NEO now; an Ultra-51 keyword later, name to be decided and checked against the tokenizer-collision
+  rules), and keeps the Neo-only detector able to hold rules for more than one target.
+- Commands (confirmed): GO 64 = cartridge off, stock C64 (38911). GO NEO = reset into stock TSB Neo 2.60.228,
+  byte-identical (30719). GO TO still works (GO acts only before 64 or NEO). The Neo-only warning's Y still switches
+  to Neo, keeping the program, and RUNs it.
+- Start-up screen (exact): border 6, background 6, text 15; rows as on the stock C64 screen (banner row 1, bytes row 3,
+  READY. below). Row 1 `     *** COMMODORE 64 TSB ULTRA ***` (5 leading spaces); row 3
+  ` 64K RAM SYSTEM 38911 BASIC BYTES FREE` (1 leading space, ONE space after SYSTEM, unlike the stock two: Fafa's
+  spec, keep it unless he says otherwise). The number is MEMSIZ − TXTTAB computed at boot, never a constant. Golden
+  for this screen, plus a pixel check at the final gate.
+- The "Decided design (10 Nov)" below describes Ultra-51; where it says 51,199 / $0801–$CFFF it is superseded for
+  Ultra-38.
+
+## Decided design (10 Nov) — what we are building (Ultra-51, now the later goal)
 1. At power-on the cartridge runs **TSB Ultra in U2+ mode**, no menu. BASIC workspace $0801–$CFFF =
    **51,199 bytes free**. Hi-res colour data and the MEM screen live in the RAM under the I/O chips
    ($D000–$DFFF), so the figure holds with HIRES, MULTI or MEM on. TSB's code runs from flash.
