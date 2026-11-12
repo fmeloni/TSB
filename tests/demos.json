@@ -1081,7 +1081,7 @@
    "name": "SHOW DRIVES.DMO",
    "id": "show_drives",
    "kind": "demo",
-   "known": [{"kernal": "jiffy", "dos": "stock", "why": "the demo tests ST=-128 exactly; an absent device sometimes answers -125 (bus timing), here under the JiffyDOS KERNAL with a stock 1541; reports/2.0-machine-matrix.md"}],
+   "known": [{"kernal": "jiffy", "why": "the demo tests ST=-128 exactly; an absent device sometimes answers -125 (bus timing). Under the JiffyDOS KERNAL (stock or JiffyDOS 1541) it fails at some RETURN delays (pal: +1 frame), on both CRTs; reports/2.0-machine-matrix.md"}],
    "reject": [
     "\\?[a-z0-9 ]+error"
    ],

@@ -4,6 +4,9 @@
   mkcrt.py easyflash <out.crt> <name> <roml-stream.bin> <romh-bank0.bin>
       ROML stream: plain binary assembled at $8000, split into 8K ROML chips for banks 0, 1, 2, ...
       ROMH bank 0: plain binary of exactly 8K assembled at $e000 (boot code with the reset vector).
+  mkcrt.py easyflash16 <out.crt> <name> <image.bin>
+      image: plain binary of 16K banks, each ROML ($8000) then ROMH ($a000/$e000); bank 0's ROMH must hold the
+      Ultimax boot code with the reset vector at its end (task 2.1 spike).
   mkcrt.py dump <file.crt>      list the CHIP packets
 CRT format: https://vice-emu.sourceforge.io/vice_17.html#SEC425 (header 64 bytes, then CHIP packets).
 EasyFlash: EXROM inactive and GAME active in the header (it boots in Ultimax mode); ROMH chips carry load
@@ -48,6 +51,14 @@ def main(a):
         banks = {i // BANK: s[i:i + BANK] for i in range(0, len(s), BANK)}
         open(out, "wb").write(easyflash(name, banks, {0: h}))
         print(f"{out}: EasyFlash, ROML banks 0-{max(banks)}, ROMH bank 0, {len(s)} bytes in ROML")
+    elif a[0] == "easyflash16":
+        out, name, img = a[1:4]
+        s = open(img, "rb").read()
+        assert len(s) % (2 * BANK) == 0, f"image must be whole 16K banks, is {len(s)} bytes"
+        n = len(s) // (2 * BANK)
+        open(out, "wb").write(easyflash(name, {b: s[2 * b * BANK:(2 * b + 1) * BANK] for b in range(n)},
+                                        {b: s[(2 * b + 1) * BANK:(2 * b + 2) * BANK] for b in range(n)}))
+        print(f"{out}: EasyFlash, banks 0-{n - 1} (ROML + ROMH)")
     elif a[0] == "dump":
         hw, ex, gm, name, chips = read(open(a[1], "rb").read())
         print(f"type {hw} EXROM={ex} GAME={gm} name={name!r}")

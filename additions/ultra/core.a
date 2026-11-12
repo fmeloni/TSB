@@ -1,0 +1,389 @@
+; -----------------------------------------------------------------------------
+; TSB Ultra - bank-switching core (plan task 2.1)
+;
+; The interpreter runs from EasyFlash flash in 16K mode with the CPU port at
+; MODE_HOME ($37): ROML $8000-$9fff, ROMH $a000-$bfff, I/O, KERNAL. The BASIC
+; workspace is $0801-$cfff, so $8000-$bfff of it lies under the cartridge.
+; This core gives the flash code its way to that RAM and to the RAM under the
+; I/O chips ($d000-$dfff, U2+ colour data and MEM screen), plus calls between
+; flash banks and interrupt entry that works in every memory configuration.
+;
+; Two pieces of RAM hold it; both are copied from flash by core_install:
+;   $df0b-$dfff  EasyFlash RAM (visible whenever I/O is visible, in every
+;                cartridge mode). $df00-$df0a stays free: TSB Neo's REU probe
+;                writes $df01-$df08 and an REU has its registers there.
+;   $ff40-$ffff  C64 RAM under the KERNAL (visible in MODE_RAM and MODE_ALL),
+;                with the CPU's NMI/IRQ vectors at $fffa/$fffe in RAM. The U2+
+;                bitmap at $e000 ends at $ff3f; demo files at $e000 end at $e7ff.
+;
+; Memory configurations used (EasyFlash in 16K mode, $de02 = $07):
+;   MODE_HOME $37  ROML, ROMH, I/O, KERNAL   (flash code runs here)
+;   MODE_RAM  $35  RAM $8000-$bfff and $e000-$ffff, I/O    (slow path)
+;   MODE_ALL  $34  RAM everywhere, no I/O                   (under-I/O access)
+;
+; Rules for code that uses the core:
+; - Flash code runs in MODE_HOME. Helpers return in MODE_HOME.
+; - Switch banks only through core_far / FAR stubs (or write core_bank first,
+;   then $de00, so an interrupt restores the right bank).
+; - Interrupt hooks (core_irqvec, core_nmivec) run in MODE_HOME, bank 0, and may
+;   use FETCH/STORE; they must not use the under-I/O helpers (core_iold/iost),
+;   whose pointer operands interrupts do not save.
+; - The KERNAL entry points used are $ff48 (IRQ), $fe43 (NMI) and $ea31; they
+;   are identical in the stock and JiffyDOS 6.01 KERNALs.
+; -----------------------------------------------------------------------------
+
+	CORE_DF		= $df0b
+	CORE_FF		= $ff40
+	CPU_PORT	= $01
+	EF_BANK		= $de00
+	MODE_HOME	= $37
+	MODE_RAM	= $35
+	MODE_ALL	= $34
+	FAKE_P		= $24		; status byte pushed for a fake interrupt frame: I set, B clear
+
+; FETCH zp = lda (zp),y for any workspace address. Preserves X, Y, C, V; sets
+; N and Z from the byte, like lda. Fast path (direct lda) when the pointer's
+; high byte is $00-$7e or $c0-$ff; $7f is slow too, because pointer+Y may cross
+; into $80xx. The slow path reads the RAM with the cartridge banked out.
+!macro FETCH .zp {
+	lda .zp+1
+	bmi .hi
+	eor #$7f
+	bne .fast
+	beq .slow
+.hi	and #$40
+	bne .fast
+.slow	lda #.zp
+	sta core_ldop+1
+	jsr core_ld
+	jmp .done
+.fast	lda (.zp),y
+.done
+}
+
+; STORE zp = sta (zp),y for any workspace address. Preserves A, X, Y and all
+; flags, like sta.
+!macro STORE .zp {
+	php
+	pha
+	lda .zp+1
+	bmi .hi
+	eor #$7f
+	bne .fast
+	beq .slow
+.hi	and #$40
+	bne .fast
+.slow	lda #.zp
+	sta core_stop+1
+	pla
+	plp
+	jsr core_st
+	jmp .done
+.fast	pla
+	sta (.zp),y
+	plp
+.done
+}
+
+; IOFETCH zp / IOSTORE zp: lda/sta (zp),y on the RAM under the I/O chips
+; (pointer into $d000-$dfff). Same register rules as FETCH / STORE.
+!macro IOFETCH .zp {
+	lda #.zp
+	sta ff_ioldop+1
+	jsr core_iold
+}
+!macro IOSTORE .zp {
+	php
+	pha
+	lda #.zp
+	sta ff_iostop+1
+	pla
+	plp
+	jsr core_iost
+}
+
+; FAR target, bank: body of a stub that calls target in another flash bank and
+; returns to the stub's caller in the caller's bank. Call the stub with jsr.
+; A, X, Y and all flags reach the target and come back from it unchanged.
+!macro FAR .target, .bank {
+	php
+	pha
+	txa
+	pha
+	lda core_bank
+	pha
+	lda #>(core_back - 1)
+	pha
+	lda #<(core_back - 1)
+	pha
+	lda #>(.target - 1)
+	pha
+	lda #<(.target - 1)
+	pha
+	lda #.bank
+	jmp core_far
+}
+
+; -----------------------------------------------------------------------------
+; core_install: copy both pieces to RAM, set the RAM vectors, hook $0314/$0318.
+; Call in MODE_HOME with interrupts off, after the KERNAL's RESTOR ($fd15).
+; -----------------------------------------------------------------------------
+core_install
+	ldx #core_df_end - core_df_image - 1
+-	lda core_df_image,x
+	sta CORE_DF,x
+	dex
+	cpx #$ff
+	bne -
+	ldx #core_ff_end - core_ff_image - 1
+-	lda core_ff_image,x
+	sta CORE_FF,x		; writes go to the RAM under the KERNAL
+	dex
+	cpx #$ff
+	bne -
+	lda #<core_irq
+	sta $0314
+	lda #>core_irq
+	sta $0315
+	lda #<core_nmi
+	sta $0318
+	lda #>core_nmi
+	sta $0319
+	rts
+
+; -----------------------------------------------------------------------------
+; Part 1: EasyFlash RAM, $df0b-$dfff
+; -----------------------------------------------------------------------------
+core_df_image
+!pseudopc CORE_DF {
+core_bank	!byte 0		; shadow of $de00 (write-only)
+core_irqvec	!word core_rts	; JSR'd in every IRQ (MODE_HOME, bank 0); default: nothing
+core_nmivec	!word $fe47	; NMI continuation (KERNAL), entered with a fake RTI frame
+
+core_rts	rts
+
+; slow FETCH: caller has put its zp pointer into core_ldop+1
+core_ld		lda #MODE_RAM
+		sta CPU_PORT
+core_ldop	lda ($00),y
+		pha
+		lda #MODE_HOME
+		sta CPU_PORT
+		pla			; N, Z from the byte
+		rts
+
+; slow STORE: caller has put its zp pointer into core_stop+1
+core_st		php
+		pha
+		lda #MODE_RAM
+		sta CPU_PORT
+		pla
+core_stop	sta ($00),y
+		inc CPU_PORT		; $36
+		inc CPU_PORT		; $37 = MODE_HOME
+		plp
+		rts
+
+; under-I/O access: enter MODE_RAM here, continue in RAM under the KERNAL
+core_iold	lda #MODE_RAM
+		sta CPU_PORT
+		jmp ff_iold
+df_iold_ret	lda #MODE_HOME
+		sta CPU_PORT
+		pla
+		rts
+core_iost	php
+		pha
+		lda #MODE_RAM
+		sta CPU_PORT
+		jmp ff_iost
+df_iost_ret	inc CPU_PORT		; MODE_RAM -> $36 -> MODE_HOME
+		inc CPU_PORT
+		plp
+		rts
+
+; IRQ, through ($0314) from the KERNAL's $ff48 (A, X, Y already saved there)
+core_irq	lda CPU_PORT
+		pha
+		lda core_bank
+		pha
+		lda core_ldop+1
+		pha
+		lda core_stop+1
+		pha
+		lda #MODE_HOME
+		sta CPU_PORT
+		lda #0
+		sta core_bank
+		sta EF_BANK
+		jsr core_irqhook
+		pla
+		sta core_stop+1
+		pla
+		sta core_ldop+1
+		pla
+		sta core_bank
+		sta EF_BANK
+		pla
+		sta CPU_PORT
+		jmp $ea31
+core_irqhook	jmp (core_irqvec)
+
+; NMI, through ($0318) from the KERNAL's $fe43
+core_nmi	pha
+		txa
+		pha
+		lda CPU_PORT
+		pha
+		lda core_bank
+		pha
+		lda core_ldop+1
+		pha
+		lda core_stop+1
+		pha
+		lda #MODE_HOME
+		sta CPU_PORT
+		lda #0
+		sta core_bank
+		sta EF_BANK
+		lda #>core_nmiret
+		pha
+		lda #<core_nmiret
+		pha
+		lda #FAKE_P
+		pha
+		jmp (core_nmivec)
+core_nmiret	pla
+		sta core_stop+1
+		pla
+		sta core_ldop+1
+		pla
+		sta core_bank
+		sta EF_BANK
+		pla
+		sta CPU_PORT
+		pla
+		tax
+		pla
+		rti
+
+; interrupts taken in MODE_RAM / MODE_ALL arrive through the RAM vectors at
+; ram_irq / ram_nmi, which come here in MODE_RAM
+df_irqgo	lda #MODE_HOME
+		sta CPU_PORT
+		jmp $ff48
+df_nmigo	lda #MODE_HOME
+		sta CPU_PORT
+		jmp $fe43
+df_ramret	lda #MODE_RAM
+		sta CPU_PORT
+		jmp ram_tail
+
+; far call, from a FAR stub. Stack: T-1 (2), core_back-1 (2), old bank, X, A, P
+core_far	sta core_bank
+		sta EF_BANK
+		tsx
+		lda $0108,x		; P
+		pha
+		lda $0107,x		; A
+		pha
+		lda $0106,x		; X
+		pha
+		pla
+		tax
+		pla
+		plp
+		rts			; -> target
+; the target returns here (MODE_HOME). Stack: old bank, X, A, P (stub's),
+; caller's return. The shuffle runs in RAM under the KERNAL (ff_back).
+core_back	php
+		pha
+		lda #MODE_RAM
+		sta CPU_PORT
+		jmp ff_back
+df_back_tail	lda #MODE_HOME
+		sta CPU_PORT
+		pla
+		tax
+		pla
+		plp
+		rts			; -> the stub's caller
+}
+core_df_end
+
+; -----------------------------------------------------------------------------
+; Part 2: RAM under the KERNAL, $ff40-$ffff (runs in MODE_RAM / MODE_ALL)
+; -----------------------------------------------------------------------------
+core_ff_image
+!pseudopc CORE_FF {
+; CPU interrupt in MODE_RAM or MODE_ALL: save A and the port, push a fake frame
+; that returns to df_ramret, enter the KERNAL's handler in MODE_HOME.
+ram_irq		pha
+		lda CPU_PORT
+		pha
+		lda #>df_ramret
+		pha
+		lda #<df_ramret
+		pha
+		lda #FAKE_P
+		pha
+		lda #MODE_RAM
+		sta CPU_PORT
+		jmp df_irqgo
+ram_nmi		pha
+		lda CPU_PORT
+		pha
+		lda #>df_ramret
+		pha
+		lda #<df_ramret
+		pha
+		lda #FAKE_P
+		pha
+		lda #MODE_RAM
+		sta CPU_PORT
+		jmp df_nmigo
+ram_tail	pla
+		sta CPU_PORT
+		pla
+		rti
+
+ff_iold		lda #MODE_ALL
+		sta CPU_PORT
+ff_ioldop	lda ($00),y
+		pha
+		lda #MODE_RAM
+		sta CPU_PORT
+		jmp df_iold_ret
+ff_iost		lda #MODE_ALL
+		sta CPU_PORT
+		pla
+ff_iostop	sta ($00),y
+		inc CPU_PORT		; MODE_ALL -> MODE_RAM
+		jmp df_iost_ret
+; far-call return, from core_back (MODE_RAM): results onto the stub's slots,
+; old bank back. Stack: Ar Pr bank Xs As Ps
+ff_back		txa
+		pha			; Xr Ar Pr bank Xs As Ps
+		tsx
+		lda $0104,x
+		sta core_bank
+		sta EF_BANK
+		lda $0101,x
+		sta $0105,x
+		lda $0102,x
+		sta $0106,x
+		lda $0103,x
+		sta $0107,x
+		txa
+		clc
+		adc #4
+		tax
+		txs
+		jmp df_back_tail
+ff_free
+		!fill $fffa - ff_free, $00
+		!word ram_nmi		; $fffa NMI
+		!word $fce2		; $fffc RESET (the EasyFlash boots from ROMH anyway)
+		!word ram_irq		; $fffe IRQ/BRK
+}
+core_ff_end

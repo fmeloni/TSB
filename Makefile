@@ -6,7 +6,7 @@ BUILD := build
 .PHONY: all build test test-demos test-commands clean
 all: build
 
-build: $(BUILD)/tsbneo_disk.prg $(BUILD)/tsbneo_cart.bin $(BUILD)/TSBUltra.crt
+build: $(BUILD)/tsbneo_disk.prg $(BUILD)/tsbneo_cart.bin $(BUILD)/TSBUltra.crt $(BUILD)/spike21.crt
 
 $(BUILD)/tsbneo_disk.prg: TSBneo/tsbneo.a TSBneo/memhook.inc TSBneo/MD_memhook.inc
 	@mkdir -p $(BUILD)
@@ -29,11 +29,19 @@ $(BUILD)/TSBUltra.crt: $(BUILD)/tsbneo_ref.bin additions/easyflash/ef_launcher.a
 	cd additions/easyflash && $(ACME) -f plain -o ../../$(BUILD)/ef_romh0.bin -l ../../$(BUILD)/ef_romh0.lbl ef_boot.a
 	python3 tools/mkcrt.py easyflash $@ "TSB ULTRA 0.1" $(BUILD)/ef_roml.bin $(BUILD)/ef_romh0.bin
 
+# Task 2.1: spike CRT for the bank-switching core (additions/ultra/core.a); tests/core21.py runs it.
+$(BUILD)/spike21.crt: additions/ultra/spike21.a additions/ultra/core.a tools/mkcrt.py
+	@mkdir -p $(BUILD)
+	cd additions/ultra && $(ACME) --initmem 255 -f plain -o ../../$(BUILD)/spike21.bin -l ../../$(BUILD)/spike21.lbl spike21.a
+	python3 tools/mkcrt.py easyflash16 $@ "TSB ULTRA CORE SPIKE 2.1" $(BUILD)/spike21.bin
+
 # TSB_CRT: the released TSBneo Magic Desk CRT (not in git); copy it to build/TSBneo.crt or pass TSB_CRT=...
 TSB_CRT ?= $(BUILD)/TSBneo.crt
 test: build
 	tests/boot_tsbneo.sh $(TSB_CRT)
 	python3 tests/ef_tsbultra.py
+	python3 tests/core21.py --video pal
+	python3 tests/core21.py --video ntsc
 	tests/detector.sh
 	python3 tests/crunch_corpus.py
 	python3 tests/no_rom_in_goldens.py

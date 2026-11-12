@@ -1,0 +1,994 @@
+; -----------------------------------------------------------------------------
+; TSB Ultra - spike CRT for the bank-switching core (plan task 2.1)
+;
+; Plain image of 4 x 8K (assemble with --initmem 255), packed by
+; tools/mkcrt.py easyflash16 into an EasyFlash CRT with banks 0 and 1:
+;   $0000 bank 0 ROML ($8000)   test program + core image
+;   $2000 bank 0 ROMH           boot code at $e000 (Ultimax), more tests at $a100 (16K mode)
+;   $4000 bank 1 ROML ($8000)   far-call targets
+;   $6000 bank 1 ROMH ($a000)   signature only
+; The test runs once after reset, leaves its results at RES ($0340, labels
+; res_*) and loops at done_loop. tests/core21.py reads and checks them.
+;   T1 memory map: STORE/FETCH over $0800-$cfff; RAM under the cartridge read back
+;      through the under-I/O path; page-crossing pointers; flash still visible
+;   T2 RAM under I/O ($d000-$dfff) and under the KERNAL ($e000-$ff3f)
+;   T3 registers and flags kept by FETCH/STORE (fast and slow paths)
+;   T4 far calls bank 0 -> 1 -> 0 with registers and flags passed through
+;   T5 stress: CIA 1 IRQ every 1499 cycles and CIA 2 NMI every 1733 cycles while
+;      fill/verify, T3 and T4 run 16 times; both hooks use FETCH/STORE themselves
+;   T6 $df00-$df0a untouched   T7 cycle counts (interrupts off)
+; -----------------------------------------------------------------------------
+
+	!cpu 6510
+
+	RES		= $0340		; results block (tape buffer, fast RAM), RES_LEN bytes
+	RES_LEN		= 128
+	res_magic	= RES		; "C21" once the program has started
+	res_state	= RES+3		; 1 = finished
+	res_err		= RES+4		; 12 error counters, one word each (ERR_*)
+	res_irqs	= RES+28	; 3 bytes: IRQ hook calls during T5
+	res_nmis	= RES+31	; 3 bytes: NMI hook calls during T5
+	res_iters	= RES+34	; T5 iterations done
+	res_port	= RES+35	; CPU port seen by the last IRQ hook call in T5
+	res_cyc		= RES+36	; 14 timer readings, one word each (CYC_*)
+	t3_p		= RES+70
+	t3_q		= RES+71
+	t3_a		= RES+72
+	t3_i		= RES+73
+	t3_j		= RES+74
+	t4_i		= RES+75
+	t4_a		= RES+76
+	t4_x		= RES+77
+	t4_y		= RES+78
+	t4_p		= RES+79
+	r_a		= RES+80
+	r_x		= RES+81
+	r_y		= RES+82
+	r_p		= RES+83
+	f1_err		= RES+84
+	f1_a		= RES+85
+	stress_on	= RES+86
+	ih_tmp		= RES+87
+	fv_start	= RES+88
+	fv_end		= RES+89
+	fv_exp		= RES+90
+	cr_i		= RES+91
+	res_first	= RES+100	; first failing address per counter (word each)
+
+	ERR_MAP		= 0		; T1 fill/verify (also T5)
+	ERR_UNDER	= 1		; T1 RAM under the cartridge, read through MODE_ALL
+	ERR_FLASH	= 2		; T1 flash signatures not visible in MODE_HOME
+	ERR_CROSS	= 3		; T1 page-crossing pointers
+	ERR_IO		= 4		; T2 RAM under I/O, or I/O disturbed
+	ERR_KERN	= 5		; T2 RAM under the KERNAL
+	ERR_REG		= 6		; T3 registers/flags
+	ERR_FAR		= 7		; T4 far calls
+	ERR_IRQ		= 8		; IRQ hook: wrong bank/port or wrong byte read
+	ERR_NMI		= 9		; NMI hook: wrong bank/port
+	ERR_GUARD	= 10		; T6 $df00-$df0a changed
+	ERR_CNT		= 11		; T5 counters kept in slow RAM disagree with the hook counts
+
+	ptr	= $fb			; main test pointer
+	iptr	= $fd			; IRQ hook pointer
+	nptr	= $f7			; NMI hook pointer
+	tmp	= $f9
+	tmp2	= $fa
+	seed	= $02
+
+	IRQ_LATCH	= 1499
+	NMI_LATCH	= 1733
+	ITERS		= 16
+	IRQ_TAB		= $a800		; 256 known bytes in slow RAM, read by the IRQ hook
+	CNT_IRQ		= $a900		; 3-byte counter kept by the IRQ hook (slow RAM)
+	CNT_NMI		= $a910		; 3-byte counter kept by the NMI hook
+
+; =============================================================================
+; bank 0 ROML
+; =============================================================================
+	* = $0000
+!pseudopc $8000 {
+sig_b0l	!by $42, $30, $4c	; "B0L"
+
+!source "core.a"
+
+!zone main
+main	sei
+	ldx #$ff
+	txs
+	cld
+	lda #$07		; EasyFlash 16K mode: ROML $8000, ROMH $a000
+	sta $de02
+	lda #0
+	sta $de00
+	ldx #10			; guard pattern in $df00-$df0a
+-	txa
+	ora #$a0
+	sta $df00,x
+	dex
+	bpl -
+	jsr $fda3		; IOINIT
+	jsr $fd50		; RAMTAS (stops at $8000: cartridge)
+	jsr $fd15		; RESTOR (vectors)
+	jsr $ff5b		; CINT (VIC, screen, 60 Hz timer)
+	jsr core_install
+	lda #<irq_hook
+	sta core_irqvec
+	lda #>irq_hook
+	sta core_irqvec+1
+	ldx #RES_LEN - 1
+	lda #0
+-	sta RES,x
+	dex
+	bpl -
+	lda #$43
+	sta res_magic
+	lda #$32
+	sta res_magic+1
+	lda #$31
+	sta res_magic+2
+	cli
+	jsr t1_map
+	jsr t2_io
+	jsr t2_kern
+	jsr t3_regs
+	jsr t4_far
+	jsr t5_stress
+	jsr t7_cycles
+	jsr t6_guard
+	jmp finish
+
+; ---- count an error: X = counter number; ptr+Y = address noted for the first one
+!zone err
+err	txa
+	asl
+	tax
+	lda res_err,x
+	ora res_err+1,x
+	bne +
+	tya
+	clc
+	adc ptr
+	sta res_first,x
+	lda ptr+1
+	adc #0
+	sta res_first+1,x
++	inc res_err,x
+	bne +
+	inc res_err+1,x
++	rts
+
+; ---- pattern byte for address ptr+Y: (lo + 7*hi) xor seed; uses tmp, tmp2
+!zone pat
+pat	tya
+	clc
+	adc ptr
+	sta tmp
+	lda ptr+1
+	adc #0
+	sta tmp2
+	asl
+	asl
+	asl
+	sec
+	sbc tmp2
+	clc
+	adc tmp
+	eor seed
+	rts
+
+; ---- fill pages [A, X) with pat through STORE, verify through FETCH (ERR_MAP)
+!zone fillver
+fillver	sta fv_start
+	stx fv_end
+	sta ptr+1
+	lda #0
+	sta ptr
+	tay
+-	jsr pat
+	+STORE ptr
+	iny
+	bne -
+	inc ptr+1
+	lda ptr+1
+	cmp fv_end
+	bne -
+	lda fv_start
+	sta ptr+1
+-	jsr pat
+	sta fv_exp
+	+FETCH ptr
+	cmp fv_exp
+	beq +
+	ldx #ERR_MAP
+	jsr err
++	iny
+	bne -
+	inc ptr+1
+	lda ptr+1
+	cmp fv_end
+	bne -
+	rts
+
+; =============================================================================
+; T1 memory map
+; =============================================================================
+!zone t1
+t1_map	lda #$5a
+	sta seed
+	lda #$08
+	ldx #$d0
+	jsr fillver		; $0800-$cfff
+	lda sig_b0l+1		; flash still visible in MODE_HOME: ROML and ROMH of bank 0
+	cmp #$30
+	bne +
+	lda sig_b0h+1
+	cmp #$30
+	beq ++
++	ldy #0
+	ldx #ERR_FLASH
+	jsr err
+++	lda #$80		; RAM under the cartridge, read through MODE_ALL (not core_ld)
+	sta ptr+1
+	lda #0
+	sta ptr
+	tay
+-	jsr pat
+	sta tmp
+	+IOFETCH ptr
+	cmp tmp
+	beq +
+	ldx #ERR_UNDER
+	jsr err
++	iny
+	bne -
+	inc ptr+1
+	lda ptr+1
+	cmp #$c0
+	bne -
+	ldx #0			; page-crossing pointers (ptr, Y) from the table
+.cross	stx cr_i
+	lda cross,x
+	sta ptr
+	lda cross+1,x
+	sta ptr+1
+	ldy cross+2,x
+	jsr pat			; expected byte from the fill
+	sta fv_exp
+	+FETCH ptr
+	cmp fv_exp
+	beq +
+	ldx #ERR_CROSS
+	jsr err
++	lda fv_exp		; write it inverted, read it back the independent way
+	eor #$ff
+	sta fv_exp
+	+STORE ptr
+	+IOFETCH ptr
+	cmp fv_exp
+	beq +
+	ldx #ERR_CROSS
+	jsr err
++	lda fv_exp
+	eor #$ff
+	+STORE ptr		; restore the pattern
+	ldx cr_i
+	inx
+	inx
+	inx
+	cpx #cross_end - cross
+	beq +
+	jmp .cross
++
+	rts
+cross	!word $7f80		; + $c0 = $8040
+	!by $c0
+	!word $bfc0		; + $80 = $c040
+	!by $80
+	!word $7fff		; + $01 = $8000
+	!by $01
+	!word $7eff		; + $ff = $7ffe
+	!by $ff
+	!word $9f80		; + $ff = $a07f
+	!by $ff
+cross_end
+
+; =============================================================================
+; T2 RAM under I/O and under the KERNAL
+; =============================================================================
+!zone t2io
+t2_io	lda $d020
+	and #$0f
+	sta fv_start
+	lda #$c3
+	sta seed
+	lda #$d0
+	sta ptr+1
+	lda #0
+	sta ptr
+	tay
+-	jsr pat
+	+IOSTORE ptr
+	iny
+	bne -
+	inc ptr+1
+	lda ptr+1
+	cmp #$e0
+	bne -
+	lda #$d0
+	sta ptr+1
+-	jsr pat
+	sta fv_exp
+	+IOFETCH ptr
+	cmp fv_exp
+	beq +
+	ldx #ERR_IO
+	jsr err
++	iny
+	bne -
+	inc ptr+1
+	lda ptr+1
+	cmp #$e0
+	bne -
+	lda $d020		; the I/O chips and the EasyFlash RAM untouched
+	and #$0f
+	cmp fv_start
+	bne +
+	lda core_irqvec
+	cmp #<irq_hook
+	beq ++
++	ldy #0
+	ldx #ERR_IO
+	jsr err
+++	rts
+
+; $e000-$ff3f through core_ld/core_st directly (FETCH sends $e0-$ff to the fast path)
+!zone t2kern
+t2_kern	lda #$3c
+	sta seed
+	lda #$e0
+	sta ptr+1
+	lda #0
+	sta ptr
+	tay
+-	jsr pat
+	pha
+	lda #ptr
+	sta core_stop+1
+	pla
+	jsr core_st
+	iny
+	bne +
+	inc ptr+1
++	lda ptr+1
+	cmp #$ff
+	bne -
+	cpy #$40
+	bne -
+	lda #$e0
+	sta ptr+1
+	ldy #0
+-	jsr pat
+	sta fv_exp
+	lda #ptr
+	sta core_ldop+1
+	jsr core_ld
+	cmp fv_exp
+	beq +
+	ldx #ERR_KERN
+	jsr err
++	iny
+	bne +
+	inc ptr+1
++	lda ptr+1
+	cmp #$ff
+	bne -
+	cpy #$40
+	bne -
+	lda $fffe		; KERNAL ROM visible again in MODE_HOME: IRQ vector $ff48
+	cmp #$48
+	bne +
+	lda $ffff
+	cmp #$ff
+	beq ++
++	ldy #0
+	ldx #ERR_KERN
+	jsr err
+++	rts
+
+; =============================================================================
+; T3 registers and flags, 3 pointers x 4 flag patterns
+; =============================================================================
+!zone t3
+t3_regs	lda #0
+	sta t3_i
+.ptr	ldx t3_i
+	lda regptr,x
+	sta ptr
+	lda regptr+1,x
+	sta ptr+1
+	lda #0
+	sta t3_j
+.pat	ldx t3_j
+	lda pflags,x
+	sta t3_p
+	; FETCH must keep X, Y, C, V and set N, Z from the byte
+	ldx #$5c
+	ldy #3
+	lda t3_p
+	pha
+	plp
+	+FETCH ptr
+	php
+	sta t3_a
+	pla
+	sta t3_q
+	cpx #$5c
+	bne .badj
+	cpy #3
+	bne .badj
+	lda t3_q
+	eor t3_p
+	and #$41
+	bne .badj
+	lda t3_a		; N, Z as for this byte
+	php
+	pla
+	eor t3_q
+	and #$82
+	bne .badj
+	jmp .store
+.badj	jmp .bad
+.store	; STORE must keep A, X, Y and P
+	ldx #$5c
+	ldy #3
+	lda t3_p
+	pha
+	lda #$a7
+	plp
+	+STORE ptr
+	php
+	sta t3_a
+	pla
+	sta t3_q
+	cpx #$5c
+	bne .badj
+	cpy #3
+	bne .badj
+	lda t3_a
+	cmp #$a7
+	bne .badj
+	lda t3_q
+	eor t3_p
+	and #$cf
+	bne .badj
+	ldy #3			; the byte arrived
+	+FETCH ptr
+	cmp #$a7
+	beq .next
+.bad	ldy #0
+	ldx #ERR_REG
+	jsr err
+.next	inc t3_j
+	lda t3_j
+	cmp #4
+	beq +
+	jmp .pat
++
+	inc t3_i
+	inc t3_i
+	lda t3_i
+	cmp #6
+	beq +
+	jmp .ptr
++
+	rts
+regptr	!word $1000, $c800, $9000
+pflags	!by $20, $e3, $61, $a2	; I clear (interrupts stay on in T5); never D (interrupt code
+				; runs with the interrupted D flag)
+
+; =============================================================================
+; T4 far calls
+; =============================================================================
+; f1 (bank 1) returns A eor $5a, X+1, Y-1, P eor $c3 (N V Z C) and calls g0 (bank 0) in between
+!zone t4
+t4_far	ldx #0
+.case	stx t4_i
+	lda farcase,x
+	sta t4_a
+	lda farcase+1,x
+	sta t4_p
+	lda farcase+2,x
+	sta t4_x
+	lda farcase+3,x
+	sta t4_y
+	lda #0
+	sta f1_err
+	ldx t4_x
+	ldy t4_y
+	lda t4_p
+	pha
+	lda t4_a
+	plp
+	jsr far_f1
+	php
+	sta r_a
+	stx r_x
+	sty r_y
+	pla
+	sta r_p
+	lda t4_a
+	eor #$5a
+	cmp r_a
+	bne .bad
+	ldx t4_x
+	inx
+	cpx r_x
+	bne .bad
+	ldy t4_y
+	dey
+	cpy r_y
+	bne .bad
+	lda t4_p
+	eor #$c3
+	eor r_p
+	and #$cf
+	bne .bad
+	lda f1_err
+	bne .bad
+	lda core_bank
+	bne .bad
+	lda sig_b0l+1
+	cmp #$30
+	beq .next
+.bad	ldy #0
+	ldx #ERR_FAR
+	jsr err
+.next	ldx t4_i
+	inx
+	inx
+	inx
+	inx
+	cpx #farcase_end - farcase
+	beq +
+	jmp .case
++
+	rts
+farcase	!by $00, $20, $00, $00	; A, P, X, Y (P: I clear, D clear)
+	!by $ff, $e3, $ff, $ff
+	!by $a5, $61, $10, $80
+	!by $5a, $a2, $7f, $01
+farcase_end
+
+far_f1	+FAR f1, 1
+far_e1	+FAR e1, 1
+
+; g0: called from bank 1, checks that bank 0 is mapped, keeps all registers
+!zone g0
+g0	php
+	pha
+	lda core_bank
+	bne +
+	lda sig_b0l+1
+	cmp #$30
+	beq ++
++	inc f1_err
+++	pla
+	plp
+	rts
+
+; =============================================================================
+; T5 stress with fast IRQs and NMIs
+; =============================================================================
+!zone t5
+t5_stress
+	lda #0
+	sta ptr
+	lda #>IRQ_TAB		; known bytes for the IRQ hook
+	sta ptr+1
+	ldy #0
+-	tya
+	eor #$96
+	+STORE ptr
+	iny
+	bne -
+	lda #>CNT_IRQ		; both counters to 0
+	sta ptr+1
+	lda #0
+	ldy #31
+-	+STORE ptr
+	dey
+	bpl -
+	sta iptr
+	sta nptr
+	lda #>IRQ_TAB
+	sta iptr+1
+	lda #>CNT_IRQ
+	sta nptr+1
+	sei
+	lda #<nmi_hook
+	sta core_nmivec
+	lda #>nmi_hook
+	sta core_nmivec+1
+	lda #<IRQ_LATCH
+	sta $dc04
+	lda #>IRQ_LATCH
+	sta $dc05
+	lda #$11		; CIA 1 timer A: force load, start, continuous
+	sta $dc0e
+	lda #<NMI_LATCH
+	sta $dd04
+	lda #>NMI_LATCH
+	sta $dd05
+	lda $dd0d
+	lda #$81		; CIA 2 timer A -> NMI
+	sta $dd0d
+	lda #$11
+	sta $dd0e
+	lda #1
+	sta stress_on
+	cli
+.iter	lda res_iters
+	eor #$33
+	sta seed
+	lda #$7e		; $7e00-$a7ff: fast, the $7f page, slow
+	ldx #$a8
+	jsr fillver
+	lda #$bf		; $bf00-$c1ff: slow, fast
+	ldx #$c2
+	jsr fillver
+	jsr t3_regs
+	jsr t4_far
+	inc res_iters
+	lda res_iters
+	cmp #ITERS
+	bne .iter
+	sei
+	lda #0
+	sta stress_on
+	lda #$7f		; NMIs off, KERNAL timer back
+	sta $dd0d
+	lda #0
+	sta $dd0e
+	lda $dd0d
+	lda #<$fe47
+	sta core_nmivec
+	lda #>$fe47
+	sta core_nmivec+1
+	jsr $ff6e		; KERNAL: CIA 1 timer A for 60 Hz ($02a6)
+	cli
+	lda #<CNT_IRQ		; the counters the hooks kept in slow RAM = the hook counts
+	sta ptr
+	lda #>CNT_IRQ
+	sta ptr+1
+	ldx #2
+-	txa
+	tay
+	+FETCH ptr
+	cmp res_irqs,x
+	bne .bad
+	txa
+	clc
+	adc #CNT_NMI - CNT_IRQ
+	tay
+	+FETCH ptr
+	cmp res_nmis,x
+	bne .bad
+	dex
+	bpl -
+	rts
+.bad	ldy #0
+	ldx #ERR_CNT
+	jsr err
+	rts
+
+; IRQ hook: JSR'd by core_irq in MODE_HOME, bank 0, every IRQ. A, X, Y free.
+!zone irqhook
+irq_hook
+	lda stress_on
+	bne +
+	rts
++	lda CPU_PORT
+	sta res_port
+	and #7
+	cmp #7
+	bne .bad
+	lda core_bank
+	bne .bad
+	lda sig_b0l+1
+	cmp #$30
+	bne .bad
+	ldy res_irqs		; IRQ_TAB+n holds n eor $96
+	+FETCH iptr
+	sta ih_tmp
+	tya
+	eor #$96
+	cmp ih_tmp
+	beq .count
+.bad	inc res_err+2*ERR_IRQ
+	bne .count
+	inc res_err+2*ERR_IRQ+1
+.count	inc res_irqs
+	bne +
+	inc res_irqs+1
+	bne +
+	inc res_irqs+2
++	lda #>CNT_IRQ		; slow-RAM counter, read-modify-write through FETCH/STORE
+	sta iptr+1
+	ldy #0
+-	+FETCH iptr
+	clc
+	adc #1
+	+STORE iptr
+	bcc +
+	iny
+	cpy #3
+	bne -
++	lda #>IRQ_TAB
+	sta iptr+1
+	rts
+
+; NMI hook (core_nmivec during T5): MODE_HOME, bank 0; ends with RTI
+!zone nmihook
+nmi_hook
+	pha
+	txa
+	pha
+	tya
+	pha
+	lda CPU_PORT
+	and #7
+	cmp #7
+	bne .bad
+	lda core_bank
+	bne .bad
+	lda sig_b0l+1
+	cmp #$30
+	beq .count
+.bad	inc res_err+2*ERR_NMI
+.count	inc res_nmis
+	bne +
+	inc res_nmis+1
+	bne +
+	inc res_nmis+2
++	ldy #CNT_NMI - CNT_IRQ
+-	+FETCH nptr
+	clc
+	adc #1
+	+STORE nptr
+	bcc +
+	iny
+	cpy #CNT_NMI - CNT_IRQ + 3
+	bne -
++	lda $dd0d		; acknowledge CIA 2
+	pla
+	tay
+	pla
+	tax
+	pla
+	rti
+
+; =============================================================================
+; T6 guard: $df00-$df0a as written at boot
+; =============================================================================
+!zone t6
+t6_guard
+	lda #0
+	sta ptr
+	lda #$df
+	sta ptr+1
+	ldy #10
+-	tya
+	ora #$a0
+	cmp $df00,y
+	beq +
+	ldx #ERR_GUARD
+	jsr err
++	dey
+	bpl -
+	rts
+
+finish	jmp finish_h		; in ROMH
+}
+
+; =============================================================================
+; bank 0 ROMH: boot at $e000 (Ultimax), more test code at $a100 (16K mode)
+; =============================================================================
+	* = $2000
+!pseudopc $e000 {
+reset	sei
+	ldx #$ff
+	txs
+	cld
+	jmp main		; ROML is at $8000 in Ultimax mode too
+bootnmi	rti
+}
+	* = $2100
+!pseudopc $a100 {
+sig_b0h	!by $42, $30, $48	; "B0H"
+
+; =============================================================================
+; T7 cycle counts with CIA 1 timer B, interrupts off; reading 0 (empty) is the overhead
+; =============================================================================
+!macro TSTART {
+	lda #$ff
+	sta $dc06
+	sta $dc07
+	lda #$11
+	sta $dc0f
+}
+!macro TSTOP .n {
+	lda #$00
+	sta $dc0f
+	lda $dc06
+	sta res_cyc+2*.n
+	lda $dc07
+	sta res_cyc+2*.n+1
+}
+!macro SETP .a {
+	lda #<.a
+	sta ptr
+	lda #>.a
+	sta ptr+1
+	ldy #0
+}
+!zone t7
+t7_cycles
+	sei
+	lda $d011		; blank the screen: no badlines steal cycles while timing
+	pha
+	and #$ef
+	sta $d011
+	ldx #2			; DEN is sampled in line $30: let a whole frame pass
+.w0	lda $d012
+	bne .w0
+	bit $d011
+	bmi .w0
+.w1	lda $d012
+	beq .w1
+	dex
+	bne .w0
+	+SETP $1000
+	+TSTART
+	+TSTOP 0		; empty
+	+TSTART
+	lda (ptr),y
+	+TSTOP 1		; native lda (zp),y
+	+TSTART
+	+FETCH ptr
+	+TSTOP 2		; FETCH $1000
+	+SETP $c800
+	+TSTART
+	+FETCH ptr
+	+TSTOP 3		; FETCH $c800
+	+SETP $9000
+	+TSTART
+	+FETCH ptr
+	+TSTOP 4		; FETCH $9000
+	+SETP $1000
+	+TSTART
+	sta (ptr),y
+	+TSTOP 5		; native sta (zp),y
+	+TSTART
+	+STORE ptr
+	+TSTOP 6		; STORE $1000
+	+SETP $c800
+	+TSTART
+	+STORE ptr
+	+TSTOP 7		; STORE $c800
+	+SETP $9000
+	+TSTART
+	+STORE ptr
+	+TSTOP 8		; STORE $9000
+	+SETP $d800
+	+TSTART
+	+IOFETCH ptr
+	+TSTOP 9		; IOFETCH $d800
+	+TSTART
+	+IOSTORE ptr
+	+TSTOP 10		; IOSTORE $d800
+	+TSTART
+	jsr e0
+	+TSTOP 11		; native jsr + rts
+	+TSTART
+	jsr far_e1
+	+TSTOP 12		; far call to an rts in bank 1 and back
+	+SETP $7f80
+	ldy #$c0
+	+TSTART
+	+FETCH ptr
+	+TSTOP 13		; FETCH $7f80+$c0 (slow by the $7f rule)
+	pla
+	sta $d011
+	cli
+	rts
+e0	rts
+
+!zone finish
+finish_h
+	ldx #0			; summary on the screen for people; the harness reads RES
+	ldy #0
+-	lda res_err,x
+	ora res_err+1,x
+	beq +
+	iny
++	inx
+	inx
+	cpx #24
+	bne -
+	ldx #10
+	cpy #0
+	bne .fail
+-	lda txt_ok,x
+	sta $0400,x
+	dex
+	bpl -
+	bmi .done
+.fail
+-	lda txt_fail,x
+	sta $0400,x
+	dex
+	bpl -
+.done	lda #1
+	sta res_state
+done_loop
+	jmp done_loop
+txt_ok	!scr "core21 ok  "
+txt_fail !scr "core21 fail"
+}
+	* = $3ffa
+!pseudopc $fffa {
+	!word bootnmi, reset, bootnmi
+}
+
+; =============================================================================
+; bank 1 ROML: far-call targets
+; =============================================================================
+	* = $4000
+!pseudopc $8000 {
+sig_b1l	!by $42, $31, $4c	; "B1L"
+; f1: checks that bank 1 is mapped (ROML, ROMH, core_bank) before and after a
+; nested far call to g0, then returns A eor $5a, X+1, Y-1, P eor $c3
+!zone f1
+f1	php
+	pha
+	jsr .check
+	pla
+	plp
+	jsr far_g0		; registers unchanged
+	php
+	pha
+	jsr .check
+	pla
+	plp
+	php
+	eor #$5a
+	sta f1_a
+	inx
+	dey
+	pla
+	eor #$c3
+	pha
+	lda f1_a
+	plp
+	rts
+.check	lda core_bank
+	cmp #1
+	bne +
+	lda sig_b1l+1
+	cmp #$31
+	bne +
+	lda sig_b1h+1
+	cmp #$31
+	beq ++
++	inc f1_err
+++	rts
+far_g0	+FAR g0, 0
+e1	rts
+}
+	* = $6000
+!pseudopc $a000 {
+	!fill $100, $ff
+sig_b1h	!by $42, $31, $48	; "B1H"
+}
+	* = $7fff
+	!by $ff
